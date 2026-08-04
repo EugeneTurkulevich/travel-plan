@@ -25,7 +25,13 @@ import math
 import sys
 from pathlib import Path
 
-STATE = Path("places/exports/route_state.json")
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from trip_ctx import paths
+CTX = paths()
+
+STATE = CTX.route_state
 
 # Точки, де великий розкид виправданий: локація сама по собі протяжна.
 ALLOW: dict[str, str] = {

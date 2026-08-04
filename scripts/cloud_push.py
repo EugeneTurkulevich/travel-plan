@@ -47,12 +47,17 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-DEFAULT_WORKER = "https://trip-map-mcp.e--t.workers.dev"
-USER_AGENT = "travel202609-cloud-push/1.0"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from trip_ctx import paths  # noqa: E402
 
-STATE_DEFAULT = Path("places/exports/route_state.json")
-ENV_FILE = Path(".env")
-DRAFT_ID_FILE = Path(".cloud-draft-id")
+DEFAULT_WORKER = "https://trip-map-mcp.e--t.workers.dev"
+USER_AGENT = "trip-map-toolkit/1.0"
+
+# Шляхи й карта — з активного профілю, не з припущення про робочий каталог.
+CTX = paths()
+STATE_DEFAULT = CTX.route_state
+ENV_FILE = CTX.env_file
+DRAFT_ID_FILE = CTX.draft_id_file
 
 # Поля точки, які приймає set_route (POINT_SCHEMA у map-server/worker/mcp/mcp-server.js).
 KNOWN_POINT_KEYS = {
@@ -85,7 +90,11 @@ def load_env_file(path=ENV_FILE):
 
 
 def get_worker(env_vars):
-    return os.environ.get("TRIP_MAP_WORKER") or env_vars.get("TRIP_MAP_WORKER") or DEFAULT_WORKER
+    # Пріоритет: оточення → .env даних → профіль поїздки → загальний дефолт.
+    return (os.environ.get("TRIP_MAP_WORKER")
+            or env_vars.get("TRIP_MAP_WORKER")
+            or CTX.trip.get("worker")
+            or DEFAULT_WORKER)
 
 
 # ── auth ──────────────────────────────────────────────────────────────────────

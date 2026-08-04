@@ -27,9 +27,10 @@ import json
 import sys
 import urllib.request
 
-from cloud_push import get_access_token, get_worker, load_env_file
+from cloud_push import CTX, get_access_token, get_worker, load_env_file
 
-MAP_ID = "zb87h25mvtdd8959f2zc"
+# Карта — з активного профілю. Літерала тут бути не може: репозиторій публічний.
+MAP_ID = CTX.map_id
 
 
 def call(worker, token, name, args):
@@ -38,7 +39,7 @@ def call(worker, token, name, args):
     req = urllib.request.Request(worker, data=body, method="POST")
     req.add_header("Authorization", f"Bearer {token}")
     req.add_header("Content-Type", "application/json")
-    req.add_header("User-Agent", "travel202609-cloud-push/1.0")
+    req.add_header("User-Agent", "trip-map-toolkit/1.0")
     with urllib.request.urlopen(req, timeout=90) as r:
         resp = json.load(r)
     if "error" in resp:

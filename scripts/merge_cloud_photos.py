@@ -41,8 +41,14 @@ from pathlib import Path
 
 from cloud_push import get_access_token, get_worker, load_env_file
 
-PLACES = Path("places")
-MAP_ID = "zb87h25mvtdd8959f2zc"
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from trip_ctx import paths
+CTX = paths()
+
+PLACES = CTX.places_dir
+MAP_ID = CTX.map_id      # з профілю: літерал у публічному репо неприпустимий
 
 # Фрагменти імені файла Wikimedia, які означають «це не те місце».
 BAD_SLUGS = [
@@ -76,7 +82,7 @@ def call(worker, token, name, args):
     req = urllib.request.Request(worker, data=body, method="POST")
     req.add_header("Authorization", f"Bearer {token}")
     req.add_header("Content-Type", "application/json")
-    req.add_header("User-Agent", "travel202609-cloud-push/1.0")
+    req.add_header("User-Agent", "trip-map-toolkit/1.0")
     with urllib.request.urlopen(req, timeout=120) as r:
         resp = json.load(r)
     if "error" in resp:

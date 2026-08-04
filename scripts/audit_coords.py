@@ -18,7 +18,13 @@ import urllib.request
 from math import asin, cos, radians, sin, sqrt
 from pathlib import Path
 
-ROOT = Path('/Users/eugenet/Documents/GitHub/travel2026/places')
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from trip_ctx import paths
+CTX = paths()
+
+ROOT = CTX.places_dir          # був абсолютний шлях, якого не існує
 UA = 'travel2026-coord-auditor/0.1 (eugene.turkulevich@gmail.com)'
 THRESHOLD_M = 300  # flag mismatches > 300 m
 

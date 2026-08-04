@@ -43,7 +43,13 @@ from pathlib import Path
 
 from cloud_push import get_access_token, get_worker, load_env_file
 
-PLACES = Path("places")
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from trip_ctx import paths
+CTX = paths()
+
+PLACES = CTX.places_dir
 
 # файл -> (коротка назва для запиту, повний контекст)
 CITY = {
@@ -215,7 +221,7 @@ def call(worker, token, name, args, tries=3):
         req = urllib.request.Request(worker, data=body, method="POST")
         req.add_header("Authorization", f"Bearer {token}")
         req.add_header("Content-Type", "application/json")
-        req.add_header("User-Agent", "travel202609-cloud-push/1.0")
+        req.add_header("User-Agent", "trip-map-toolkit/1.0")
         try:
             with urllib.request.urlopen(req, timeout=90) as r:
                 resp = json.load(r)

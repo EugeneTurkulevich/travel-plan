@@ -52,8 +52,14 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-PLACES = Path("places")
-CACHE = Path(".osm-audit-cache.json")
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from trip_ctx import paths
+CTX = paths()
+
+PLACES = CTX.places_dir
+CACHE = CTX.cache_dir / "osm-audit.json"
 OVERPASS = "https://overpass-api.de/api/interpreter"
 RADIUS_KM = 15
 # Секції, які не звіряємо: це заклади й товари, а не картографічні обʼєкти.
@@ -165,7 +171,7 @@ def overpass(lat, lon, cache, refresh=False):
             + "\n);out center tags;")
     req = urllib.request.Request(
         OVERPASS, data=urllib.parse.urlencode({"data": body}).encode(),
-        headers={"User-Agent": "travel202609-coord-audit/1.0"})
+        headers={"User-Agent": "trip-map-toolkit-audit/1.0"})
     for attempt in range(3):
         try:
             with urllib.request.urlopen(req, timeout=180) as resp:

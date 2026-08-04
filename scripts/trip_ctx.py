@@ -206,6 +206,27 @@ def context(argv=None, data_root=None, trip_id=None):
     return TripContext(root, tid, json.loads(trip_file.read_text(encoding="utf-8")))
 
 
+_BANNER_SHOWN = False
+
+
+def paths(banner=True):
+    """Контекст для скрипта: зрозуміла помилка замість трейсбека + шапка.
+
+    Шапка друкується ОДИН раз за процес, навіть якщо кілька модулів
+    імпортують одне одного (mcp_probe → cloud_push тощо).
+    """
+    global _BANNER_SHOWN
+    try:
+        ctx = context()
+    except TripContextError as e:
+        print(f"⚠️  {e}", file=sys.stderr)
+        sys.exit(1)
+    if banner and not _BANNER_SHOWN:
+        ctx.banner(sys.stderr)          # у stderr, щоб не псувати pipe з JSON
+        _BANNER_SHOWN = True
+    return ctx
+
+
 def list_trips(data_root):
     """[(id, trip_dict)] — усі профілі в корені даних."""
     trips_dir = data_root / "trips"

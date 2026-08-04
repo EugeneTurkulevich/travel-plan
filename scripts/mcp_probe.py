@@ -29,7 +29,7 @@ def rpc(worker: str, token: str, method: str, params=None, rid: int = 1):
     req = urllib.request.Request(worker, data=json.dumps(body).encode(), method="POST")
     req.add_header("Authorization", f"Bearer {token}")
     req.add_header("Content-Type", "application/json")
-    req.add_header("User-Agent", "travel202609-cloud-push/1.0")
+    req.add_header("User-Agent", "trip-map-toolkit/1.0")
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
             raw = r.read().decode()

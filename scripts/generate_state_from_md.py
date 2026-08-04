@@ -16,10 +16,16 @@ from datetime import date, timedelta
 from pathlib import Path
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-INDEX        = Path("places/INDEX.md")
-PLACES       = Path("places")
-STATE        = Path("places/exports/route_state.json")
-COUNTRY_INFO = Path("places/country_info.md")
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from trip_ctx import paths
+CTX = paths()
+
+INDEX        = CTX.trip_dir / "INDEX.md"   # Ф4: заміниться на route.json
+PLACES       = CTX.places_dir
+STATE        = CTX.route_state
+COUNTRY_INFO = CTX.places_dir / "country_info.md"
 HR     = "<hr style='border:0;border-top:1px solid #ddd;margin:6px 0'>"
 
 # Deprecated place files – excluded even if found in table
@@ -611,8 +617,8 @@ def main():
 
             # Multi-night: та сама ночівля, що й попередньої ночі → nights += 1.
             # Шукаємо саме останню *overnight*-точку, а не points[-1]: між двома
-            # ночами може стояти денна visit-точка (напр. Літохоро → Пріонія →
-            # Літохоро у день сходження на Олімп).
+            # ночами може стояти денна visit-точка (радіальна вилазка з бази:
+            # база → обʼєкт → база, і база НЕ дублюється).
             if kind == 'overnight':
                 prev_on = next((p for p in reversed(points)
                                 if p['kind'] == 'overnight'), None)
