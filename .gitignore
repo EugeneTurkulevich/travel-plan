@@ -1,0 +1,20 @@
+# Локальне налаштування шляху до даних — у кожного своє
+.travel-local.json
+
+# Секрети. У цьому репо їх не буває взагалі: токен живе в корені ДАНИХ
+.env
+
+# Дані сюди не потрапляють ніколи (гейт — scripts/check_no_data.py).
+# Ці рядки не «на всяк випадок», а страховка від випадкового cp з travel202609:
+places/
+trips/
+exports/
+live_mirror.json
+.cloud-draft-id
+*route_state*.json
+*.cache.json
+
+# Python / macOS
+__pycache__/
+*.pyc
+.DS_Store
