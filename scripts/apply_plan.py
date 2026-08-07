@@ -14,10 +14,17 @@ scripts/apply_plan.py
   - реальне виконання проти карти профілю вимагає ОБОХ прапорців разом:
     --map <id> (має збігтися з map_id активного профілю) і
     --yes-i-mean-the-shared-map. Без обох, чи з чужим id — відмова;
-  - --rehearse створює ВЛАСНУ приватну чернетку (create_map, draft: true) і
-    виконує план на ній. Чернетка не спільна, приєднання закрите — спільної
-    карти цей режим не торкається. promote_draft тут НЕ викликається НІКОЛИ
-    (і взагалі відсутній у цьому файлі).
+  - --rehearse: (1) create_map(draft: true) — ВЛАСНА приватна чернетка,
+    приєднання закрите; (2) засіює її route-шаром зі ЗНІМКА спільної карти
+    (live_mirror.json, локальний файл — жодного мережевого звернення до
+    спільної карти) ОДНИМ set_route, з id кожної точки, інакше точкові кроки
+    плану (update_point тощо) не знайдуть своїх точок; (3) виконує план на
+    чернетці як завжди. Спільної карти цей режим не торкається на жодному
+    кроці. promote_draft тут НЕ викликається НІКОЛИ (і взагалі відсутній у
+    цьому файлі) — репетиція лишає чернетку на сервері для звірки очима на
+    trip-map.web.app, прибирається вручну delete_map.
+    Обмеження: засівається лише route-шар — альтернативи/мітки/рейтинги/
+    треди в чернетці не зʼявляються (live-шар не копіюється).
 
 Перевикористовує call_tool/get_access_token/get_worker/load_env_file з
 cloud_push.py — не дублює авторизацію й обробку помилок JSON-RPC.
@@ -55,7 +62,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cloud_push import (  # noqa: E402
-    CTX, call_tool, get_access_token, get_worker, load_env_file,
+    CTX, KNOWN_POINT_KEYS, call_tool, get_access_token, get_worker, load_env_file,
 )
 
 # Мітки лежать десь на маршруті (наприклад «Приклад — треба» біля
@@ -200,18 +207,17 @@ def touched_point_ids(steps):
 
 
 def marks_near_touched_points(plan):
-    """Нагадування про мітки, повʼязані з планом. Мітки НЕ мають прямого
-    посилання на point_id (методичка цього не передбачає), тож точного
-    зіставлення не існує — беремо два наближення, обидва консервативні
-    (краще зайва мітка в списку, ніж пропущена):
+    """Нагадування про ВІДКРИТІ (status="open") мітки, які стосуються плану.
+    Уже закриті мітки сюди свідомо НЕ потрапляють — resolve_mark на них не
+    потрібен, для стеження за «закрито, але потім дописали» є окремий
+    check_marks.py, це не задача цього скрипта.
 
-      - "proximity": мітка лежить за ≤MARK_PROXIMITY_KM (route-масштаб, не
-        сусідній будинок — мітка типу «Приклад — треба» може стояти
-        за 30-50 км від найближчої точки маршруту, якої стосується порада);
-      - "open": УСІ ще не закриті мітки карти — незалежно від відстані,
-        бо не закрита мітка так чи інакше потребує рішення людини, а
-        пропустити її через невдалий збіг координат гірше, ніж показати
-        зайву.
+    Мітки не мають прямого посилання на point_id (методичка цього не
+    передбачає), тож точного звʼязку з точкою немає — де вдалось, підписуємо
+    її за близькістю координат (≤MARK_PROXIMITY_KM, route-масштаб: мітка
+    типу «Приклад — треба» може стояти за 30-50 км від найближчої
+    точки маршруту, якої стосується порада); де не вдалось — мітка все одно
+    показана як відкрита, просто без підказки «біля якої точки».
 
     Джерело — live_mirror.json (локальний файл, уже витягнутий pull_map.py;
     без мережевого виклику)."""
@@ -234,8 +240,10 @@ def marks_near_touched_points(plan):
             label = p.get("label") or p.get("name") or pid
             coords.append((label, p["lat"], p["lon"]))
 
-    by_id = {}
+    hits = []
     for m in marks:
+        if m.get("status") != "open":
+            continue
         mlat, mlon = m.get("lat"), m.get("lon")
         label = None
         if mlat is not None and mlon is not None:
@@ -243,11 +251,8 @@ def marks_near_touched_points(plan):
                 if haversine_km(mlat, mlon, lat, lon) <= MARK_PROXIMITY_KM:
                     label = cand_label
                     break
-        if label is not None:
-            by_id[m.get("id")] = (m, label, "proximity")
-        elif m.get("status") == "open" and m.get("id") not in by_id:
-            by_id[m.get("id")] = (m, None, "open")
-    return list(by_id.values())
+        hits.append((m, label, "proximity" if label else "open"))
+    return hits
 
 
 # ── виконання кроків ─────────────────────────────────────────────────────────
@@ -389,22 +394,74 @@ def print_final_report(plan, log, final_rev, mode, log_path):
 
     hits = marks_near_touched_points(plan)
     if hits:
-        print("\n⚠ Мітки, які стосуються цього плану (за близькістю координат "
-              f"≤{MARK_PROXIMITY_KM:.0f} км ДО ЗМІНЕНИХ точок, плюс УСІ ще не "
-              "закриті мітки карти) — перевір і закрий resolve_mark(status, "
-              "comment) вручну (рішення про зміст, скрипт його не приймає):")
+        print(f"\n⚠ Відкриті мітки карти ({len(hits)}) — перевір і закрий "
+              "resolve_mark(status, comment) вручну (рішення про зміст, скрипт "
+              f"його не приймає); де вдалось звʼязати за координатами (≤{MARK_PROXIMITY_KM:.0f} км "
+              "від точки, якої стосувався план) — підписано, де ні — усе одно варто глянути:")
         for m, label, reason in hits:
-            where = f"— біля «{label}»" if reason == "proximity" else "— відкрита, звʼязку з планом не встановлено"
-            print(f"   · мітка {m.get('id')} [{m.get('status')}] «{m.get('title') or ''}» {where}")
+            where = f"— біля «{label}»" if reason == "proximity" else "— звʼязку з планом за координатами не знайдено"
+            print(f"   · мітка {m.get('id')} «{m.get('title') or ''}» {where}")
     else:
-        print("\n(Немає ні відкритих міток, ні міток поблизу змінених точок за "
-              "координатами дзеркала — усе одно варто перевірити list_marks очима, "
-              "це наближення, не гарантія.)")
+        print("\n(Відкритих міток на карті немає — усе одно варто перевірити "
+              "list_marks очима, координати в дзеркалі можуть бути неповними.)")
 
     if mode == "rehearse":
         print(f"\n[REHEARSE] чернетка {log['map_id']} лишилась на сервері — "
               "приберіть її вручну (delete_map), якщо вона більше не потрібна. "
               "Цей скрипт promote_draft не викликає ніколи.")
+
+
+REHEARSAL_LIMITATION_NOTE = (
+    "⚠ Обмеження репетиції: засів чернетки — це ОДИН set_route з route-шаром "
+    "(points/country_info/booking_persons) зі знімка дзеркала. Live-шар "
+    "(альтернативи, мітки, рейтинги, треди обговорення) НЕ копіюється — його "
+    "там просто не буде. Це не різниця з живою картою, а обмеження методу "
+    "засіву: порівнюй route-шар (маршрут, точки, попапи, POI, розклад), а "
+    "не наявність альтернатив/міток у чернетці."
+)
+
+
+def seed_draft_from_mirror(worker, token, draft_map_id):
+    """Заливає в СВІЖОСТВОРЕНУ приватну чернетку route-шар зі знімка спільної
+    карти (live_mirror.json — локальний файл, без звернення до спільної
+    карти по мережі). Обовʼязково передає id кожної точки — інакше set_route
+    згенерує нові id, і жоден точковий крок плану (update_point/update_poi/…)
+    свою точку не знайде.
+
+    Повертає (rev_після_засіву, кількість_засіяних_точок, шлях_дзеркала,
+    pulled_at_дзеркала)."""
+    mirror_path = CTX.live_mirror
+    if not mirror_path.exists():
+        sys.exit(
+            f"Немає {mirror_path} — репетиції нічим засівати чернетку. "
+            "Спершу python3 scripts/pull_map.py."
+        )
+    try:
+        mirror = json.loads(mirror_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as e:
+        sys.exit(f"{mirror_path}: не вдалось прочитати дзеркало: {e}")
+
+    mirror_route = mirror.get("route") or {}
+    raw_points = mirror_route.get("points") or []
+    points = [{k: v for k, v in p.items() if k in KNOWN_POINT_KEYS} for p in raw_points]
+    missing_id = sum(1 for p in points if not p.get("id"))
+    if missing_id:
+        print(f"    ⚠ {missing_id} точок дзеркала без id — set_route згенерує їм нові "
+              "(це лише репетиція, наслідків для спільної карти немає)")
+
+    seed_args = {"map_id": draft_map_id, "points": points}
+    if mirror_route.get("country_info"):
+        seed_args["country_info"] = mirror_route["country_info"]
+    if mirror_route.get("booking_persons") is not None:
+        seed_args["booking_persons"] = mirror_route["booking_persons"]
+
+    pulled_at = mirror.get("pulled_at")
+    print(f"    засіваю {len(points)} точок зі знімка {mirror_path.name} "
+          f"(знято {pulled_at}, rev дзеркала {mirror.get('rev')})...")
+    result = call_tool(worker, token, "set_route", seed_args)
+    seeded_rev = result.get("rev")
+    print(f"    ✓ засіяно: {len(points)} точок → rev чернетки {seeded_rev}")
+    return seeded_rev, len(points), mirror_path, pulled_at
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────
@@ -449,24 +506,44 @@ def main():
     token = get_access_token(env_vars, worker)
 
     if mode == "rehearse":
+        # 1. власна приватна чернетка — спільної карти цей режим не торкається.
         ts = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        name = f"rehearsal {CTX.trip_id} {ts}"
+        name = f"репетиція {CTX.trip_id} {ts}"
         created = call_tool(worker, token, "create_map", {"name": name, "draft": True})
         target_map_id = created.get("map_id")
         if not target_map_id:
             sys.exit(f"create_map не повернув map_id: {created}")
-        print(f"✓ create_map (чернетка для репетиції): {target_map_id} «{name}» — {created.get('url', '')}")
+        draft_url = created.get("url") or ""
+        print(f"✓ create_map (чернетка для репетиції): {target_map_id} «{name}»"
+              + (f" — {draft_url}" if draft_url else ""))
         print("  (приватна, приєднання закрите — спільної карти не торкається; "
-              "promote_draft НЕ буде викликано)")
+              "promote_draft у цьому файлі відсутній і не викликається)")
+
+        # 2. засіяти чернетку поточним станом спільної карти (з ЛОКАЛЬНОГО
+        # дзеркала — жодного мережевого звернення до спільної карти).
+        current_rev, seeded_n, mirror_path, mirror_pulled_at = seed_draft_from_mirror(
+            worker, token, target_map_id)
+
+        shared_url = None
+        if draft_url and target_map_id in draft_url:
+            shared_url = draft_url.replace(target_map_id, CTX.map_id)
+        print("\nПорівняти в trip-map.web.app (відкрий поруч):")
+        if shared_url:
+            print(f"  спільна карта:  {shared_url}")
+        else:
+            print(f"  спільна карта:  map_id={CTX.map_id} (відкрий на trip-map.web.app і обери цю карту)")
+        print(f"  чернетка:       {draft_url or f'map_id={target_map_id}'}")
+        print(f"  чернетку прибрати після звірки: delete_map(map_id={target_map_id})")
+        print(f"\n{REHEARSAL_LIMITATION_NOTE}")
+
         log_path = CTX.trip_dir / "apply_log.rehearse.json"
     else:
         target_map_id = args.map
         log_path = CTX.trip_dir / "apply_log.json"
 
-    route = call_tool(worker, token, "get_route", {"map_id": target_map_id})
-    current_rev = route.get("rev")
+        route = call_tool(worker, token, "get_route", {"map_id": target_map_id})
+        current_rev = route.get("rev")
 
-    if mode == "real":
         if current_rev != plan.get("base_rev"):
             sys.exit(
                 f"Карту змінили після планування: rev карти зараз {current_rev}, "
@@ -474,14 +551,16 @@ def main():
                 "Не підлаштовуюсь — перескладіть план: python3 scripts/plan_push.py"
             )
         print(f"✓ Свіжість підтверджено: rev карти {current_rev} = base_rev плану.")
-    else:
-        print(f"[REHEARSE] rev нової чернетки: {current_rev} "
-              f"(base_rev плану {plan.get('base_rev')} стосується ІНШОЇ, спільної карти — "
-              "не звіряю, це різні карти).")
 
     print(f"\nВиконую {len(plan['steps'])} крок(и/ів) на map={target_map_id}...\n")
     log, final_rev = run_steps(worker, token, target_map_id, current_rev, plan, log_path, mode)
     print_final_report(plan, log, final_rev, mode, log_path)
+    if mode == "rehearse":
+        print(f"[REHEARSE] підсумок: точок засіяно {seeded_n} · кроків плану пройшло "
+              f"{log['summary']['applied']}/{len(plan['steps'])} · rebased на "
+              f"{len(log['summary']['rebased_steps'])} · booking_warning "
+              f"{log['summary']['booking_warnings_total']} · фінальний rev чернетки "
+              f"{final_rev} · чернетка {target_map_id}")
     return 0
 
 
