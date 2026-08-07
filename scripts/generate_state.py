@@ -60,16 +60,43 @@ DEFAULT_ICON = '📍'
 
 # ── Text helpers (ported verbatim from the old MD-based generator) ───────────
 
+def _strip_comments(text):
+    """Прибрати HTML-коментарі `<!-- … -->`.
+
+    У картках вони — службові позначки для людини: «не вичитано», «кандидат на
+    перевірку координати», «розбіжність при злитті». На карту вони не йдуть
+    ніколи. Без цього маркер `<!-- З травневої картки 2026, не вичитано -->`,
+    що стоїть у комірці таблиці POI, поїхав би на спільну карту як частина
+    НАЗВИ точки — знайдено 07.08.2026 перед першим пушем.
+
+    Прибираємо саме на виході, а не в картці: у файлі позначка має лишатись,
+    інакше зникне сигнал «цього ще ніхто не читав».
+    """
+    return re.sub(r'<!--.*?-->', '', text, flags=re.S)
+
+
+def _strip_links(text):
+    """Replace markdown links `[text](url)` with bare `text`.
+
+    Links between library cards are navigation for us (repo file paths like
+    `ro-brasov.md`), not content for the map — the popup should show only
+    the visible label, never the `](...)` target.
+    """
+    return re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', text)
+
+
 def _inline_md(text):
-    """Convert **bold** / *italic* inline markdown to HTML."""
-    t = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
+    """Convert **bold** / *italic* inline markdown to HTML, drop md links."""
+    t = _strip_links(_strip_comments(text))
+    t = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', t)
     t = re.sub(r'\*(.+?)\*',     r'<i>\1</i>', t)
     return t
 
 
 def strip_md(text):
     """Remove all markdown markup, return plain text."""
-    t = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+    t = _strip_links(_strip_comments(text))
+    t = re.sub(r'\*\*(.*?)\*\*', r'\1', t)
     t = re.sub(r'\*(.*?)\*',     r'\1', t)
     t = re.sub(r'`([^`]*)`',     r'\1', t)
     return t.strip()
@@ -209,12 +236,11 @@ def parse_main_coords(md_text):
 # ── Popup HTML assembly ───────────────────────────────────────────────────────
 
 def _table_block(table, icon, title):
-    """Local/gelato/craft popup block — ported verbatim from _local_block /
-    _gelato_block / _craft_block. КАЖНА з трьох мала однакову ваду: `desc`
-    береться сирим (row[1].strip()), без прогону через _inline_md — лише
-    назва (перша колонка) чиститься strip_md. Це той самий дефект, який
-    задача явно назвала на прикладі _local_block; тут він відтворений
-    буквально і для двох інших категорій теж — не виправлено навмисно."""
+    """Local/gelato/craft popup block — shared by 🛍️/🍦/🍺. `desc` (second
+    column) is now run through _inline_md, same as the rest of the prose
+    (`**bold**` → `<b>`, `*italic*` → `<i>`, md links stripped to bare text)
+    — previously it was taken raw, so markup leaked into the popup as
+    literal asterisks (borg Ф8, was true for all three categories)."""
     if not table:
         return ''
     lines = []
@@ -222,7 +248,7 @@ def _table_block(table, icon, title):
         if len(row) < 2:
             continue
         name = strip_md(row[0])
-        desc = row[1].strip()
+        desc = _inline_md(row[1].strip())
         if name:
             lines.append(f'<b>{name}</b> — {desc}')
     if not lines:
