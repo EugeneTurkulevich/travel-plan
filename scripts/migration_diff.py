@@ -26,13 +26,33 @@ scripts/migration_diff.py
     popup_html нової точки, або у overlay/<id>.md цієї ж точки (шлях — через
     trip_ctx, id береться з НОВОГО файлу за тим самим індексом).
 
-Usage:
+ЗАМОРОЖЕНІ ДЕЛЬТИ. Ручна вичитка (Ф3) свідомо переписала частину прози —
+гейт звіряє точні речення й не вміє відрізнити переформулювання від втрати.
+Межу проводить людина один раз, письмово, у accepted_deltas.json:
+
     python3 scripts/migration_diff.py <еталон.json> [--state <новий.json>]
+                                       [--accepted <accepted_deltas.json>]
+
+Без --accepted поведінка не змінюється — усе, що знайдено, виводиться як є.
+З --accepted:
+  - структурна розбіжність вважається очікуваною, якщо її (точка, поле)
+    збігається із записом у "структурні" (поле — за індексом точки І за
+    шаблоном поля, "nested_points[].name" = будь-який індекс, "nested_points[8].description" —
+    конкретний);
+  - втрачене речення вважається очікуваним за НАЗВОЮ точки з еталона (не за
+    текстом — формулювання нового тексту нам невідоме за визначенням), і
+    лише якщо фактична кількість втрат для точок запису не перевищує
+    заморожену "кількість". Перевищення — це нова втрата, вона завжди падає
+    гейтом, навіть якщо точка є в списку. Менший факт — список застарів,
+    про це повідомляється окремо, це не провал.
+
+Код виходу залежить ЛИШЕ від несподіваних розбіжностей/втрат.
 
 Без --state новий файл береться з CTX.route_state.
 
-Вихід: зведення + код виходу 0, якщо немає ні структурних розбіжностей, ні
-втрачених речень, інакше 1.
+Вихід: зведення (окремо очікувані/несподівані) + код виходу 0, якщо немає
+несподіваних структурних розбіжностей і несподіваних втрачених речень,
+інакше 1.
 """
 import argparse
 import html
@@ -77,10 +97,14 @@ def collapse_ws(text):
 
 # HTML-теги, після яких у розмітці попапів завжди йде змістовий розрив
 # (заголовок/абзац/список), а не просто інлайн-емфаза всередині речення.
-# «<b>Заголовок</b><br>Опис» — саме цей патерн: без розриву тут заголовок без
-# крапки приклеюється до першого речення опису і збіг ламається.
+# «<b>Заголовок</b><br>Опис» — саме цей патерн: заголовок без крапки не має
+# приклеюватись до першого речення опису. Розрив тут дає сам <br> — «b» НЕ
+# входить у цей набір: <b> також використовується як інлайн-емфаза
+# ВСЕРЕДИНІ речення («Закладено <b>1 годину</b> на проходження…»), і якби
+# він теж форсував розрив, речення різалось би на осколки по кожному
+# виділенню, а не по межах заголовок/абзац.
 _BREAK_TAG_NAMES = {
-    "br", "hr", "div", "p", "b", "li", "ul", "ol", "tr", "table",
+    "br", "hr", "div", "p", "li", "ul", "ol", "tr", "table",
     "h1", "h2", "h3", "h4", "h5", "h6",
 }
 
@@ -144,21 +168,35 @@ def split_sentences(text):
 
 
 # ── (а) структурна перевірка ─────────────────────────────────────────────────
+#
+# Кожна структурна розбіжність — запис {"point": i|None, "field": str, "text": str}.
+# "point" — індекс точки еталона (той самий, що в accepted_deltas.json"точки"),
+# None — для розбіжностей, які не привʼязані до конкретної точки (кількість
+# точок загалом, country_info, booking_persons); такі ніколи не підпадають під
+# заморожений список і завжди лишаються несподіваними.
+# "field" — machine-readable ім'я поля для зіставлення з accepted_deltas.json:
+# "lat", "kind", … для точки верхнього рівня; "nested_points[{j}].{ім'я}" для
+# вкладеної; службові маркери ("points.count", "nested_points.count",
+# "__missing__") для розбіжностей кількості/відсутності.
 
 def diff_points(etalon_points, new_points):
-    """Повертає (diffs: list[str], id_present, id_total)."""
+    """Повертає (diffs: list[dict], id_present, id_total)."""
     diffs = []
     id_present = 0
 
     if len(etalon_points) != len(new_points):
-        diffs.append(
-            f"кількість точок не збігається: еталон={len(etalon_points)} "
-            f"нове={len(new_points)}"
-        )
+        diffs.append({
+            "point": None, "field": "points.count",
+            "text": f"кількість точок не збігається: еталон={len(etalon_points)} "
+                    f"нове={len(new_points)}",
+        })
 
     for i, e in enumerate(etalon_points):
         if i >= len(new_points):
-            diffs.append(f"точка[{i}] «{e.get('label')}»: відсутня в новому файлі")
+            diffs.append({
+                "point": i, "field": "__missing__",
+                "text": f"точка[{i}] «{e.get('label')}»: відсутня в новому файлі",
+            })
             continue
         n = new_points[i]
         if "id" in n:
@@ -171,26 +209,29 @@ def diff_points(etalon_points, new_points):
             if field == "nights":
                 ev, nv = normalize_nights(ev), normalize_nights(nv)
             if ev != nv:
-                diffs.append(
-                    f"точка[{i}] «{label}».{field}: еталон={ev!r} / нове={nv!r}"
-                )
+                diffs.append({
+                    "point": i, "field": field,
+                    "text": f"точка[{i}] «{label}».{field}: еталон={ev!r} / нове={nv!r}",
+                })
 
         e_nested = e.get("nested_points") or []
         n_nested = n.get("nested_points") or []
         if len(e_nested) != len(n_nested):
-            diffs.append(
-                f"точка[{i}] «{label}».nested_points: кількість не збігається "
-                f"(еталон={len(e_nested)} нове={len(n_nested)})"
-            )
+            diffs.append({
+                "point": i, "field": "nested_points.count",
+                "text": f"точка[{i}] «{label}».nested_points: кількість не збігається "
+                        f"(еталон={len(e_nested)} нове={len(n_nested)})",
+            })
         for j in range(min(len(e_nested), len(n_nested))):
             en, nn = e_nested[j], n_nested[j]
             for field in NESTED_FIELDS:
                 ev, nv = en.get(field), nn.get(field)
                 if ev != nv:
-                    diffs.append(
-                        f"точка[{i}] «{label}».nested_points[{j}].{field}: "
-                        f"еталон={ev!r} / нове={nv!r}"
-                    )
+                    diffs.append({
+                        "point": i, "field": f"nested_points[{j}].{field}",
+                        "text": f"точка[{i}] «{label}».nested_points[{j}].{field}: "
+                                f"еталон={ev!r} / нове={nv!r}",
+                    })
 
     return diffs, id_present, len(new_points)
 
@@ -202,14 +243,115 @@ def diff_top_level(etalon, new):
     n_ci = new.get("country_info") or {}
     for cc in sorted(set(e_ci) | set(n_ci)):
         if e_ci.get(cc) != n_ci.get(cc):
-            diffs.append(f"country_info[{cc}]: розбіжність")
+            diffs.append({
+                "point": None, "field": f"country_info[{cc}]",
+                "text": f"country_info[{cc}]: розбіжність",
+            })
 
     e_bp = etalon.get("booking_persons")
     n_bp = new.get("booking_persons")
     if e_bp != n_bp:
-        diffs.append(f"booking_persons: еталон={e_bp!r} / нове={n_bp!r}")
+        diffs.append({
+            "point": None, "field": "booking_persons",
+            "text": f"booking_persons: еталон={e_bp!r} / нове={n_bp!r}",
+        })
 
     return diffs
+
+
+# ── заморожені дельти (accepted_deltas.json) ─────────────────────────────────
+
+_NESTED_FIELD_RE = re.compile(r"^nested_points\[(\d*)\]\.(.+)$")
+
+
+def load_accepted(path):
+    if not path:
+        return None
+    p = Path(path).expanduser()
+    if not p.exists():
+        raise SystemExit(f"⚠️  Немає файлу заморожених дельт: {p}")
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+def _field_pattern_matches(pattern, field):
+    """"nested_points[].name" збігається з "nested_points[3].name" за будь-яким
+    індексом; "nested_points[8].description" — лише з тим самим індексом;
+    прості імена ("lat") збігаються лише з такими самими простими іменами."""
+    pm = _NESTED_FIELD_RE.match(pattern)
+    fm = _NESTED_FIELD_RE.match(field)
+    if pm and fm:
+        p_idx, p_name = pm.groups()
+        f_idx, f_name = fm.groups()
+        if p_name != f_name:
+            return False
+        return p_idx == "" or p_idx == f_idx
+    if pm or fm:
+        return False
+    return pattern == field
+
+
+def classify_structural(diffs, accepted):
+    """Розкладає структурні розбіжності на (очікувані, несподівані) за
+    accepted["структурні"]: збіг за індексом точки І за шаблоном поля."""
+    if not accepted:
+        return [], diffs
+
+    entries = accepted.get("структурні", [])
+    expected, unexpected = [], []
+    for d in diffs:
+        point = d["point"]
+        hit = point is not None and any(
+            point in entry.get("точки", [])
+            and any(_field_pattern_matches(p, d["field"]) for p in entry.get("поля", []))
+            for entry in entries
+        )
+        (expected if hit else unexpected).append(d)
+    return expected, unexpected
+
+
+def classify_losses(losses, accepted):
+    """Розкладає втрачені речення на (очікувані, несподівані, нотатки) за
+    accepted["втрачені_речення"]: зіставлення за НАЗВОЮ точки з еталона
+    (текст нового формулювання нам за визначенням невідомий), з перевіркою
+    кількості — фактично більше, ніж заморожено, для тих самих точок, це
+    завжди нова втрата, незалежно від того, що точка в списку."""
+    if not accepted:
+        return [], losses, []
+
+    by_label = {}
+    for label, s in losses:
+        by_label.setdefault(label, []).append(s)
+
+    covered = set()
+    expected, unexpected, notes = [], [], []
+
+    for entry in accepted.get("втрачені_речення", []):
+        labels = entry.get("точки", [])
+        frozen = entry.get("кількість", 0)
+        group = [(lbl, s) for lbl in labels for s in by_label.get(lbl, [])]
+        covered.update(labels)
+        actual = len(group)
+
+        if actual > frozen:
+            unexpected.extend(group)
+            notes.append(
+                f"⚠️  {', '.join(labels)}: фактично втрачено {actual}, заморожено "
+                f"{frozen} — понад список є НОВІ втрати"
+            )
+        elif actual < frozen:
+            expected.extend(group)
+            notes.append(
+                f"ℹ️  {', '.join(labels)}: заморожено {frozen}, фактично лише {actual} "
+                f"— список застарів"
+            )
+        else:
+            expected.extend(group)
+
+    for label, sents in by_label.items():
+        if label not in covered:
+            unexpected.extend((label, s) for s in sents)
+
+    return expected, unexpected, notes
 
 
 # ── (б) перевірка збереження тексту ──────────────────────────────────────────
@@ -288,6 +430,11 @@ def main(argv):
     )
     parser.add_argument("etalon", help="еталонний route_state.json (старий репо)")
     parser.add_argument("--state", help="новий route_state.json (типово CTX.route_state)")
+    parser.add_argument(
+        "--accepted",
+        help="заморожений список свідомих розбіжностей (accepted_deltas.json). "
+             "Без прапорця усе, що знайдено, виводиться як є.",
+    )
     args = parser.parse_args(argv[1:])
 
     etalon_path = Path(args.etalon).expanduser()
@@ -299,6 +446,8 @@ def main(argv):
     if not new_path.exists():
         print(f"⚠️  Немає нового файлу: {new_path}", file=sys.stderr)
         return 1
+
+    accepted = load_accepted(args.accepted)
 
     etalon = json.loads(etalon_path.read_text(encoding="utf-8"))
     new = json.loads(new_path.read_text(encoding="utf-8"))
@@ -314,19 +463,37 @@ def main(argv):
         e_points, n_points, CTX.overlay_dir, route_slugs
     )
 
+    struct_expected, struct_unexpected = classify_structural(struct_diffs, accepted)
+    loss_expected, loss_unexpected, loss_notes = classify_losses(losses, accepted)
+
     print(f"еталон:  {etalon_path}")
     print(f"нове:    {new_path}")
+    if accepted:
+        print(f"заморожені дельти: {args.accepted}")
     print()
     print(f"(а) структура: звірено точок {min(len(e_points), len(n_points))} з "
           f"{len(e_points)} (еталон) / {len(n_points)} (нове)")
     print(f"    id: {id_present}/{id_total} точок нового файлу мають id "
           f"(очікувано — лише в новому файлі)")
-    if struct_diffs:
-        print(f"    розбіжностей: {len(struct_diffs)}")
-        for d in struct_diffs:
-            print(f"      · {d}")
+
+    if accepted:
+        if struct_expected:
+            print(f"    очікувані (accepted_deltas.json): {len(struct_expected)}")
+            for d in struct_expected:
+                print(f"      · {d['text']}")
+        if struct_unexpected:
+            print(f"    НЕСПОДІВАНІ: {len(struct_unexpected)}")
+            for d in struct_unexpected:
+                print(f"      · {d['text']}")
+        if not struct_expected and not struct_unexpected:
+            print("    розбіжностей немає")
     else:
-        print("    розбіжностей немає")
+        if struct_diffs:
+            print(f"    розбіжностей: {len(struct_diffs)}")
+            for d in struct_diffs:
+                print(f"      · {d['text']}")
+        else:
+            print("    розбіжностей немає")
 
     print()
     print(f"(б) текст: перевірено речень {checked} точок; "
@@ -334,15 +501,38 @@ def main(argv):
           f"(route.json: {CTX.route_json})")
     print(f"    overlay-файлів прочитано: {overlay_found} з {overlay_candidates} "
           f"точок з відомим slug")
-    if losses:
-        print(f"    ВТРАЧЕНО речень: {len(losses)}")
-        for label, s in losses:
-            print(f"      · [{label}] {s}")
-    else:
-        print("    втрачених речень немає")
 
-    ok = not struct_diffs and not losses
+    if accepted:
+        for note in loss_notes:
+            print(f"    {note}")
+        if loss_expected:
+            print(f"    очікувані (accepted_deltas.json): {len(loss_expected)}")
+            for label, s in loss_expected:
+                print(f"      · [{label}] {s}")
+        if loss_unexpected:
+            print(f"    НЕСПОДІВАНІ втрати: {len(loss_unexpected)}")
+            for label, s in loss_unexpected:
+                print(f"      · [{label}] {s}")
+        if not loss_expected and not loss_unexpected:
+            print("    втрачених речень немає")
+    else:
+        if losses:
+            print(f"    ВТРАЧЕНО речень: {len(losses)}")
+            for label, s in losses:
+                print(f"      · [{label}] {s}")
+        else:
+            print("    втрачених речень немає")
+
     print()
+    if accepted:
+        print(f"очікувані (за {Path(args.accepted).name}): "
+              f"{len(struct_expected)} структурних, {len(loss_expected)} речень")
+        print(f"НЕСПОДІВАНІ: {len(struct_unexpected)} структурних, "
+              f"{len(loss_unexpected)} речень")
+        ok = not struct_unexpected and not loss_unexpected
+    else:
+        ok = not struct_diffs and not losses
+
     print("✓ гейт пройдено" if ok else "✗ гейт НЕ пройдено")
     return 0 if ok else 1
 
