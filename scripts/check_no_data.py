@@ -24,6 +24,25 @@ scripts/check_no_data.py
     метаданих з координатами, пара lat/lon у клітинці таблиці
   - секрети/експортований стан за іменем файлу: .env (не .env.example),
     .cloud-draft-id, live_mirror.json, *.cache.json, шлях під exports/
+  - PII (категорія `pii`, знахідка 04.08.2026: справжня пошта в рядку
+    User-Agent audit_coords.py — гейт її не спіймав, знайшлась читанням):
+      · адреса e-mail, ОКРІМ явно прикладових доменів (example.com/.org/.net,
+        .test/.invalid/.localhost — RFC 2606/6761, саме те, чим позначають
+        приклад, а не людину);
+      · присвоєння секрету за ІМЕНЕМ змінної (імʼя містить одне зі слів
+        TOKEN, SECRET, PASSWORD, API_KEY, BEARER, а праворуч від `=`/`:`
+        стоїть непорожнє рядкове значення), ОКРІМ явних заглушок (порожньо,
+        кутові дужки, зірочки, `changeme`, `your-...`) і ОКРІМ Python-виразів
+        (виклик функції, колекція) та кириличної прози праворуч — так, як
+        .env.example документує змінні без витоку значень.
+  НЕ ловиться надійно (свідомо не реалізовано — див. коментар біля PII-
+  патернів): довгі base64/hex-рядки — колізії з git-хешами, map_point_id
+  (8 hex), контрольними сумами лок-файлів; телефонні номери — колізії з
+  координатами, ISO-таймстемпами (+03:00) і байтовими/ціновими числами.
+  Ловити їх формою рядка означало б або тишу, або шум, який перестають
+  читати (докстрінг вище, «ЧОМУ ТАК»). Секрет за ЗМІСТОМ значення (не за
+  іменем змінної) з тієї ж причини не ловиться — тримати частотний
+  словник «що виглядає як токен» це і є прогалина, а не перевірка.
 
 Перевірки на основі даних (ПРОПУСКАЮТЬСЯ, якщо ../travel-data не знайдено):
   - географічні назви: з H1 карток бібліотеки (двомовний заголовок картки,
@@ -179,6 +198,67 @@ CARD_HEADING_RE = re.compile(r"^##\s*Цікаві POI\s*$")
 CARD_COORD_PAIR_RE = re.compile(r"(?<![\d.])-?\d{1,3}\.\d{3,},\s*-?\d{1,3}\.\d{3,}(?![\d.])")
 
 PLACE_META_SKIP = {"country_info.md", "practical_info.md", "CATALOG.md"}
+
+# ── PII (категорія "pii") ────────────────────────────────────────────────────
+# ЧОМУ САМЕ ЦІ ДВІ ФОРМИ. E-mail і секрет-за-іменем-змінної — обидва
+# ловляться за ФОРМОЮ РЯДКА з дуже вузьким і легітимним винятком (приклад/
+# заглушка), тому дають мало або нуль хибних спрацювань. Усе, що ловиться
+# лише "виглядає схоже" (довгий base64/hex, телефон) — свідомо НЕ додано,
+# бо колізує з легітимним кодом/даними тулкіта (git-хеші, map_point_id,
+# координати, ISO-таймстемпи +03:00) частіше, ніж ловить справжній витік;
+# гейт, що кричить дарма, перестають читати (докстрінг файлу, «ЧОМУ ТАК»).
+EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+# RFC 2606 / RFC 6761 — домени, зарезервовані САМЕ для прикладів і тестів,
+# ніколи не видаються реальним людям. .env.example, схеми, доки — легітимно
+# пишуть user@example.com; будь-який інший домен вважається справжнім.
+EMAIL_EXEMPT_SUFFIXES = (".example.com", ".example.org", ".example.net",
+                          ".example", ".test", ".invalid", ".localhost")
+EMAIL_EXEMPT_EXACT = {"example.com", "example.org", "example.net", "example.edu"}
+
+
+def _is_exempt_email_domain(domain):
+    domain = domain.lower()
+    return domain in EMAIL_EXEMPT_EXACT or domain.endswith(EMAIL_EXEMPT_SUFFIXES)
+
+
+# Секрет за ІМЕНЕМ змінної: KEY = value / KEY: value, де KEY містить одне з
+# ключових слів. Анкер на ім'я (не на форму значення!) — саме тому це не
+# колізує з випадковими довгими рядками деінде в тулкіті.
+SECRET_ASSIGN_RE = re.compile(
+    r"\b([A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD|PASSWD|API_KEY|APIKEY|BEARER)[A-Z0-9_]*)"
+    r"\s*[:=]\s*(<[^>]*>|\"[^\"]*\"|'[^']*'|\S+)"
+)
+# Заглушки, якими легітимно позначають "тут має бути значення, але не тут":
+# порожньо, кутові дужки, зірочки-маска, "your-..."/"changeme"/"xxx...".
+SECRET_PLACEHOLDER_RE = re.compile(
+    r"^(|<[^>]*>|\*+|\"\"|''|your[-_].*|changeme|xxx+|todo|\.\.\.)$", re.IGNORECASE
+)
+
+
+def _is_secret_placeholder(value):
+    v = value.strip().strip("\"'")
+    return bool(SECRET_PLACEHOLDER_RE.match(v))
+
+
+CYRILLIC_RE = re.compile(r"[а-яА-ЯіІїЇєЄґҐ]")
+
+
+def _is_code_or_prose_value(value):
+    """Справжній секрет — це рядковий літерал/сире значення, ніколи не
+    Python-вираз і ніколи не кирилична проза. Без цього фільтра власні
+    константи гейта (SECRET_EXACT_NAMES = {...}, SECRET_ASSIGN_RE =
+    re.compile(...)) і власний докстрінг («...BEARER = значення...»)
+    ловлять самі себе — саме той шум, через який гейти перестають читати."""
+    v = value.strip()
+    if not v:
+        return True
+    if v[0] in "{[(":       # колекція/виклик-конструктор, не значення
+        return True
+    if "(" in v:            # виклик функції (re.compile(...) тощо)
+        return True
+    if CYRILLIC_RE.search(v):  # проза українською — не секрет
+        return True
+    return False
 
 
 # ── файловий скоуп ───────────────────────────────────────────────────────────
@@ -347,6 +427,30 @@ def check_card_markers(rel_path, text):
     return findings
 
 
+def check_email(rel_path, text):
+    def matcher(line):
+        for m in EMAIL_RE.finditer(line):
+            addr = m.group(0)
+            domain = addr.rsplit("@", 1)[-1]
+            if not _is_exempt_email_domain(domain):
+                yield addr
+    return scan_lines(rel_path, text, matcher, "pii",
+                       lambda s: f"адреса «{s}» схожа на справжню e-mail (не example.com/.org/.net "
+                                 "чи .test/.invalid/.localhost) — особисті дані не належать репозиторію")
+
+
+def check_secret_assign(rel_path, text):
+    def matcher(line):
+        for m in SECRET_ASSIGN_RE.finditer(line):
+            key, value = m.group(1), m.group(2)
+            if not _is_secret_placeholder(value) and not _is_code_or_prose_value(value):
+                yield f"{key}={value}"
+    return scan_lines(rel_path, text, matcher, "pii",
+                       lambda s: f"«{s}» — присвоєння секрету за іменем змінної (TOKEN/SECRET/"
+                                 "PASSWORD/API_KEY/BEARER) з непорожнім значенням, що не схоже на "
+                                 "заглушку; секрети живуть у .env кореня даних, не тут")
+
+
 def check_secret_filenames(rel_path):
     findings = []
     p = Path(rel_path)
@@ -424,6 +528,8 @@ def run():
         findings += check_map_id(rel_path, text)
         findings += check_abs_path(rel_path, text)
         findings += check_card_markers(rel_path, text)
+        findings += check_email(rel_path, text)
+        findings += check_secret_assign(rel_path, text)
         findings += check_tokens(
             rel_path, text, geo_names, "geo_name",
             lambda name, src: f"назва «{name}» зустрічається в бібліотеці місць ({src}) — "
