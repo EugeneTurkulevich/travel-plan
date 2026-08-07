@@ -408,16 +408,69 @@ def build_plan(state, mirror, state_path):
     demote_ids = [mp.get("id") for mp in demote_candidates]
     demote_affects = [mp.get("label") for mp in demote_candidates]
 
-    if demote_ids:
+    # promote_alt_points: групуємо суцільні відрізки вставки за позицією в
+    # цільовому порядку намір (intent_ids_seq), щоб не втратити порядок
+    # точок у маршруті без set_route. Рахуємо ДО побудови демоут/промоут-
+    # кроків: рішення «один rebuild_segment чи демоут+промоут окремо»
+    # залежить від кількості груп.
+    promote_ids = {ap.get("id") for _, ap, _ in promote_candidates}
+    stable_ids = set(mirror_ids_seq) - set(demote_ids) - ({swap_demote_id} if swap_demote_id else set())
+    groups = group_insertions(intent_ids_seq, stable_ids, promote_ids)
+
+    # N↔M переїзд одним атомарним записом: є що прибрати (demote_ids) і РІВНО
+    # одна позиція вставки (одна група promote-кандидатів) — тоді
+    # rebuild_segment замінює demote_points+promote_alt_points двома
+    # окремими викликами. Це дефолт методички (trip-map://guide, «Переїзд
+    # між шарами»): між двома шаро-переїзними викликами немає авто-rebase на
+    # застарілий base_rev, тож другий виклик з тим самим base_rev, з яким
+    # складено план, впаде конфліктом ревізій.
+    use_rebuild_segment = bool(demote_ids) and len(groups) == 1 and bool(groups[0][1])
+    merge_warning = None
+
+    if use_rebuild_segment:
+        anchor, ids = groups[0]
+        args = {"remove_ids": demote_ids, "alt_ids": ids}
+        if anchor is not None:
+            args["after_id"] = anchor
+        else:
+            args["at_index"] = 0
+        names = [ap.get("name") for _, ap, _ in promote_candidates if ap.get("id") in ids]
         steps.append({
-            "op": "demote_points",
-            "args": {"point_ids": demote_ids},
-            "why": ("точка є на маршруті карти, немає в нашому намірі "
-                    "(exports/route_state.json) — переносимо в альтернативи, "
-                    "а не видаляємо: наповнення, рейтинги й тред зберігаються "
-                    "під тим самим id (trip-map://guide, «Переїзд між шарами»)"),
-            "affects": demote_affects,
+            "op": "rebuild_segment",
+            "args": args,
+            "why": ("точка(и) є на маршруті карти, немає в намірі, а на їхнє місце намір "
+                    "хоче поставити точку(и), що зараз лежать серед альтернатив — одна "
+                    "атомарна ревізія замість demote_points+promote_alt_points двома "
+                    "окремими викликами: між ними другий виклик мусив би піти з "
+                    "ОНОВЛЕНИМ base_rev (з відповіді першого), бо переїзд між шарами не "
+                    "має авто-rebase на застарілий base_rev (trip-map://guide, «Переїзд "
+                    "між шарами») — зі старим base_rev він впаде конфліктом ревізій і "
+                    "лишить маршрут напівперебудованим. Точки отримають timing_stale:"
+                    "true — перевір гейт нижче"),
+            "affects": demote_affects + names,
         })
+    else:
+        if demote_ids:
+            steps.append({
+                "op": "demote_points",
+                "args": {"point_ids": demote_ids},
+                "why": ("точка є на маршруті карти, немає в нашому намірі "
+                        "(exports/route_state.json) — переносимо в альтернативи, "
+                        "а не видаляємо: наповнення, рейтинги й тред зберігаються "
+                        "під тим самим id (trip-map://guide, «Переїзд між шарами»)"),
+                "affects": demote_affects,
+            })
+            if len(groups) >= 2:
+                merge_warning = (
+                    "⚠️ rebuild_segment не покриває цей випадок: він підтримує лише "
+                    "ОДНУ позицію вставки, а тут їх "
+                    f"{len(groups)} — тож план лишає demote_points + {len(groups)} "
+                    "promote_alt_points окремими викликами. Кожен виклик ПІСЛЯ першого "
+                    "мусить піти з ОНОВЛЕНИМ base_rev (з відповіді попереднього виклику), "
+                    "а не з base_rev, з яким складено цей план — інакше він впаде "
+                    "конфліктом ревізій і лишить маршрут напівперебудованим (точки вже "
+                    "прибрані, заміна ще не вставлена)"
+                )
 
     if swap:
         d, ip, ap = swap
@@ -432,30 +485,25 @@ def build_plan(state, mirror, state_path):
             "affects": [d.get("label"), ap.get("name")],
         })
 
-    # promote_alt_points: групуємо суцільні відрізки вставки за позицією в
-    # цільовому порядку намір (intent_ids_seq), щоб не втратити порядок
-    # точок у маршруті без set_route.
-    promote_ids = {ap.get("id") for _, ap, _ in promote_candidates}
-    stable_ids = set(mirror_ids_seq) - set(demote_ids) - ({swap_demote_id} if swap_demote_id else set())
-    groups = group_insertions(intent_ids_seq, stable_ids, promote_ids)
-    promote_affects = []
-    for anchor, ids in groups:
-        args = {"alt_ids": ids}
-        if anchor is not None:
-            args["after_id"] = anchor
-        else:
-            args["at_index"] = 0
-        names = [ap.get("name") for _, ap, _ in promote_candidates if ap.get("id") in ids]
-        promote_affects.extend(names)
-        steps.append({
-            "op": "promote_alt_points",
-            "args": args,
-            "why": ("точка(и) з наміру мають id, що зараз лежить серед альтернатив "
-                    "на карті — наповнення копіюється на сервері, id зберігається "
-                    "(рейтинги/тред переїжджають самі). Точки отримають timing_stale:"
-                    "true — перевір гейт нижче"),
-            "affects": names,
-        })
+    if not use_rebuild_segment:
+        promote_affects = []
+        for anchor, ids in groups:
+            args = {"alt_ids": ids}
+            if anchor is not None:
+                args["after_id"] = anchor
+            else:
+                args["at_index"] = 0
+            names = [ap.get("name") for _, ap, _ in promote_candidates if ap.get("id") in ids]
+            promote_affects.extend(names)
+            steps.append({
+                "op": "promote_alt_points",
+                "args": args,
+                "why": ("точка(и) з наміру мають id, що зараз лежить серед альтернатив "
+                        "на карті — наповнення копіюється на сервері, id зберігається "
+                        "(рейтинги/тред переїжджають самі). Точки отримають timing_stale:"
+                        "true — перевір гейт нижче"),
+                "affects": names,
+            })
 
     # add_point — точка є в намірі, але її НІДЕ немає на карті (ні в
     # маршруті, ні в альтернативах). Рідкісний і не зовсім штатний випадок:
@@ -571,6 +619,8 @@ def build_plan(state, mirror, state_path):
 
     # ── гейти ───────────────────────────────────────────────────────────────
     notes = []
+    if merge_warning:
+        notes.append(merge_warning)
 
     booked = mirror_route.get("booked") or {}
     final_ids = (set(mirror_ids_seq) - set(demote_ids)

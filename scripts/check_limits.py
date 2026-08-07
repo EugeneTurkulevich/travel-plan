@@ -42,7 +42,10 @@ LIMIT_POI_DESCRIPTION = 500
 LIMIT_PHOTO_URL = 500
 LIMIT_LABEL = 200
 LIMIT_POI_NAME = 120
-LIMIT_PAYLOAD_BYTES = 900 * 1024  # 900 КБ = 921600 Б
+LIMIT_PAYLOAD_BYTES = 900_000  # рівно межа воркера (writeRouteWithRevision/
+# assertLiveDocSizeOk у mcp-server.js рахують new TextEncoder().encode(...).length
+# > 900_000, а не 900*1024=921600 — з тим числом наш guard був би лагідніший за
+# реальний і пропустив би payload, який сервер усе одно відхилить)
 
 
 def build_payload(state):
