@@ -79,7 +79,7 @@ def _strip_links(text):
     """Replace markdown links `[text](url)` with bare `text`.
 
     Links between library cards are navigation for us (repo file paths like
-    `ro-brasov.md`), not content for the map — the popup should show only
+    `<slug>.md`), not content for the map — the popup should show only
     the visible label, never the `](...)` target.
     """
     return re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', text)
@@ -236,7 +236,8 @@ def parse_main_coords(md_text):
 # ── Popup HTML assembly ───────────────────────────────────────────────────────
 
 def _table_block(table, icon, title):
-    """Local/gelato/craft popup block — shared by 🛍️/🍦/🍺. `desc` (second
+    """Табличний блок попапа — спільний для всіх категорійних секцій
+    картки (які саме — задає poi_categories профілю). `desc` (другий
     column) is now run through _inline_md, same as the rest of the prose
     (`**bold**` → `<b>`, `*italic*` → `<i>`, md links stripped to bare text)
     — previously it was taken raw, so markup leaked into the popup as
