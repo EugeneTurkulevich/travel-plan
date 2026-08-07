@@ -49,13 +49,16 @@ def build_mirror(map_id, m, route, alt, marks, places):
 
     ДВА свідомі рішення, обидва оголошені в самому файлі:
 
-    1. `route` беремо ЦІЛКОМ, а не за списком полів. Перша редакція контракту
-       перелічувала points/booked/ratings/threads/links/booking_persons/
-       country_info — і мовчки губила schedule/legs_km_auto/legs_min_auto/
-       legs_source, які get_route теж віддає. Для дзеркала, по якому потім
-       будується план публікації, це дірка: розклад, порахований сервером, —
-       саме те, з чим ми звіряємось. Копіюємо все, іменовані ключі лише
-       ґарантуємо, щоб споживачі не писали перевірок на відсутність.
+    1. `route` і `alt` беремо ЦІЛКОМ, а не за списком полів. Перша редакція
+       контракту перелічувала для route points/booked/ratings/threads/links/
+       booking_persons/country_info — і мовчки губила schedule/legs_km_auto/
+       legs_min_auto/legs_source, які get_route теж віддає. Для `alt` та сама
+       вада повторилась мовчки 08.08.2026: перелік points/links/ratings
+       губив новий poi_spread з list_alt_route, доки не перевели на той
+       самий принцип. Для дзеркала, по якому потім будується план публікації,
+       це дірка: те, що порахував сервер, — саме те, з чим ми звіряємось.
+       Копіюємо все, іменовані ключі лише ґарантуємо, щоб споживачі не
+       писали перевірок на відсутність.
 
     2. `alt.points` СОРТУЄМО за id. Воркер віддає їх у нестабільному порядку:
        набір і вміст ті самі, а порядок різний щоразу — через це кожен diff
@@ -71,7 +74,10 @@ def build_mirror(map_id, m, route, alt, marks, places):
         route_all[key] = route_all.get(key) or empty
     route_all["booking_persons"] = route_all.get("booking_persons") or 0
 
-    alt_points = sorted(alt.get("points") or [], key=lambda p: p.get("id") or "")
+    alt_all = dict(alt)
+    alt_all["points"] = sorted(alt.get("points") or [], key=lambda p: p.get("id") or "")
+    alt_all["links"] = alt_all.get("links") or []
+    alt_all["ratings"] = alt_all.get("ratings") or {}
 
     return {
         "_": (
@@ -90,11 +96,7 @@ def build_mirror(map_id, m, route, alt, marks, places):
                        "нестабільному порядку, а дзеркало має бути придатним "
                        "до diff. Решта масивів — як віддав тул."),
         "route": route_all,
-        "alt": {
-            "points": alt_points,
-            "links": alt.get("links") or [],
-            "ratings": alt.get("ratings") or {},
-        },
+        "alt": alt_all,
         "marks": marks.get("marks") or [],
         "places": places,
     }
