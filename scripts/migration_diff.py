@@ -359,9 +359,9 @@ def classify_losses(losses, accepted):
 def load_route_slugs(route_json_path):
     """route.json.days[].points[].id, по порядку, як точки йдуть у маршруті.
 
-    ⚠️ Це slug бібліотеки (`ua-kyiv`), а НЕ те, що лежить у полі `id` точки
-    згенерованого route_state.json — там `id` це map_point_id карти
-    (`c7642202`), службовий ідентифікатор для set_route, а не назва картки.
+    ⚠️ Це slug бібліотеки (напр. `cc-example-town`), а НЕ те, що лежить у полі
+    `id` точки згенерованого route_state.json — там `id` це map_point_id карти
+    (службовий хеш), ідентифікатор для set_route, а не назва картки.
     Slug для overlay/<slug>.md треба брати саме звідси, зіставляючи з новим
     файлом ПО ІНДЕКСУ: route.json обходиться в тому самому порядку, в якому
     генератор кладе точки в route_state.json.

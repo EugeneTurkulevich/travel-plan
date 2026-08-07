@@ -72,20 +72,24 @@ _TRIP_PHRASES = ["цього разу", "тут ми стоїмо", "дві но
 # \b межі слів — щоб "дві ночі" не спрацювало підрядком у "обидві ночі".
 _TRIP_PHRASE_RES = [re.compile(r"\b" + re.escape(p) + r"\b") for p in _TRIP_PHRASES]
 
-# Дати цієї поїздки — 13–29.09.2026. ДД.ММ поза цим вікном (напр. "01.07–31.10"
-# — сезон роботи тунелю Трансфагараш, "30.06.2026" — дата завершення ремонту
-# мосту) — це ПОСТІЙНИЙ факт з числом у форматі дати, а не день конкретної
-# поїздки, і трип-специфічним НЕ рахується (вичитка 2: "ознака — прив'язка до
-# дати/дня цієї поїздки, а не наявність числа").
-_TRIP_DATE_START = _date(2026, 9, 13)
-_TRIP_DATE_END = _date(2026, 9, 29)
+# Дати цієї поїздки — з trip.json активного профілю (CTX), НЕ літерал: це
+# конкретний факт конкретної подорожі, тому мандрує з даними, а не з
+# тулкітом. ДД.ММ поза цим вікном (напр. сезон роботи гірського тунелю чи
+# дата завершення ремонту мосту, вписані в прозу картки) — це ПОСТІЙНИЙ факт
+# з числом у форматі дати, а не день конкретної поїздки, і трип-специфічним
+# НЕ рахується (вичитка 2: "ознака — прив'язка до дати/дня цієї поїздки, а
+# не наявність числа"). Рік для розбору "ДД.ММ" беремо з року старту поїздки
+# (як і сама поїздка, single-year — так було й раніше).
+_TRIP_DATE_START = _date.fromisoformat(CTX.trip["start"])
+_TRIP_DATE_END = _date.fromisoformat(CTX.trip["end"])
+_TRIP_YEAR = _TRIP_DATE_START.year
 
 
 def _has_trip_date(text):
     for m in _DATE_RE.finditer(text):
         dd, mm = m.groups()
         try:
-            d = _date(2026, int(mm), int(dd))
+            d = _date(_TRIP_YEAR, int(mm), int(dd))
         except ValueError:
             continue
         if _TRIP_DATE_START <= d <= _TRIP_DATE_END:
@@ -95,9 +99,9 @@ def _has_trip_date(text):
 
 def is_trip_specific(text):
     """Речення/пункт трип-специфічний, якщо містить D-маркер, дату ДД.ММ у
-    межах вікна цієї поїздки (13–29.09.2026), коротку назву дня тижня, час
-    прибуття/виїзду або одну з ключових фраз (§3 постановки). У сумнівних
-    випадках — False (лишити в бібліотеці)."""
+    межах вікна цієї поїздки (CTX.trip.start…end), коротку назву дня тижня,
+    час прибуття/виїзду або одну з ключових фраз (§3 постановки). У
+    сумнівних випадках — False (лишити в бібліотеці)."""
     if _D_MARKER_RE.search(text):
         return True
     if _DAY_WORD_RE.search(text):
@@ -356,9 +360,9 @@ def render_overlay_sections(overlay_by_header):
 
 # Секції, з яких взагалі виносимо трип-специфічну прозу (§3 постановки +
 # розширення після вичитки: ## Практичне і ## Де зупинитись теж містять
-# прив'язані до дат/днів пункти — "заправитись перед D10", "e-вінєтка з
-# 18.09"). ## Опис карток кордонів свідомо НЕ чіпаємо — там навмисно
-# перемішані постійні факти й планові рішення цієї поїздки, розводити
+# прив'язані до дат/днів пункти — «заправитись перед D10», «пропуск/віньєтка
+# треба мати вже до дня N»). ## Опис карток кордонів свідомо НЕ чіпаємо — там
+# навмисно перемішані постійні факти й планові рішення цієї поїздки, розводити
 # автоматично небезпечно (§ "Чого НЕ роби").
 SPLIT_HEADERS_SENTENCE = {"Опис"}          # розбиття по реченнях
 SPLIT_HEADERS_UNIT = {"Нотатки", "Практичне", "Де зупинитись"}  # по одиницях
@@ -415,13 +419,13 @@ def process_single(fname, source_dir, slug, report):
 
 # ── обробка групи злиття (2 файли → 1 картка) ───────────────────────────────
 
-TITLE_OVERRIDES = {
-    # Обидва напрямки того самого кордону мають різні заголовки в джерелі —
-    # жодне з них саме по собі не годиться для двосторонньої картки, тому
-    # заголовок побудовано вручну (порядок міст — як у slug: border-cc1-cc2).
-    "border-ro-ua-siret-porubne": "Кордон RO↔UA: Сірет / Порубне (Siret / Porubne)",
-    "border-bg-gr-kulata-promachonas": "Кордон BG↔GR: Кулата / Промахонас (Kulata / Promachonas)",
-}
+# Заголовки для злитих карток, де обидва напрямки того самого кордону мають
+# РІЗНІ заголовки в джерелі — жодне з них саме по собі не годиться для
+# двосторонньої картки. Значення — рішення для КОНКРЕТНИХ кордонів
+# конкретної міграції, тому живуть у slugmap.json (`titles`), поруч з
+# рештою рішень про ідентичність (merge/_ручні_рішення), а не тут: раніше
+# тут був літерал TITLE_OVERRIDES — помилка публічності (STRUCTURE_PROPOSAL
+# §7). Порожній словник, якщо slugmap.json такого ключа не несе.
 
 
 def combine_metadata_rows(rowsA, rowsB, slug, fnameA, fnameB, report):
@@ -461,7 +465,7 @@ def merge_section_bodies(bodyA, bodyB, fnameA, fnameB, header, slug, report):
     return f"{a}\n\n{marker}\n\n{b}"
 
 
-def process_merge(fnameA, fnameB, source_dir, slug, report):
+def process_merge(fnameA, fnameB, source_dir, slug, report, title_overrides):
     textA = (source_dir / "places" / fnameA).read_text(encoding="utf-8")
     textB = (source_dir / "places" / fnameB).read_text(encoding="utf-8")
     titleA, rowsA_raw, sectionsA = parse_card(textA)
@@ -472,8 +476,8 @@ def process_merge(fnameA, fnameB, source_dir, slug, report):
     combined_rows = combine_metadata_rows(kept_rowsA, kept_rowsB, slug, fnameA, fnameB, report)
     final_rows = [("ID", f"`{slug}`"), ("Глибина", "повний")] + combined_rows
 
-    if slug in TITLE_OVERRIDES:
-        title = TITLE_OVERRIDES[slug]
+    if slug in title_overrides:
+        title = title_overrides[slug]
         report.merge_notes.append(
             f"  {slug}: заголовки джерел різняться ({titleA!r} vs {titleB!r}) — "
             f"побудовано двосторонній заголовок вручну: {title!r}"
@@ -553,7 +557,7 @@ def parse_index_route(index_path):
 
 
 def walk_points(route_rows):
-    """Повторює алгоритм generate_state_from_md.py (day1: усі зупинки;
+    """Повторює алгоритм старого (видаленого, Ф4) MD-генератора (day1: усі зупинки;
     подальші дні: без першої — це вчорашня ночівля; та сама точка наступної
     ночі підряд — не новий запис, а +1 до nights попередньої). Повертає
     список {day, date, fname, kind} — по одному на точку route_state.json,
@@ -669,9 +673,14 @@ def build_route_json(source_dir, slugmap, trip_id, live_mirror_path, report):
 
     ordered_days = [days[d] for d in sorted(days)]
 
+    # Кандидати, для яких на карті НЕМАЄ живої альтернативної точки (звірено
+    # list_alt_route) — рішення конкретної міграції, у slugmap.json
+    # (`exclude_from_alternates`, з підставою в `_ручні_рішення`), не в коді.
+    exclude_alt = set(slugmap.get("exclude_from_alternates", []))
+
     alternates = []
     for fname, slug in slugmap["candidates_2026_09"].items():
-        if slugmap.get("_ручні_рішення", {}).get(slug, "") and slug == "ro-postavarul":
+        if slug in exclude_alt:
             continue
         card_path = source_dir / "places" / fname
         text = card_path.read_text(encoding="utf-8")
@@ -770,7 +779,8 @@ def main():
             card_md, overlay_md = process_single(fnames[0], source_dir, slug, report)
         elif len(fnames) == 2:
             fnameA, fnameB = fnames
-            card_md, overlay_md = process_merge(fnameA, fnameB, source_dir, slug, report)
+            card_md, overlay_md = process_merge(
+                fnameA, fnameB, source_dir, slug, report, slugmap.get("titles", {}))
         else:
             raise SystemExit(f"❌ {slug}: неочікувано {len(fnames)} файлів у групі: {fnames}")
 

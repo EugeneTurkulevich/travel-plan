@@ -1,8 +1,9 @@
 """
 scripts/find_poi_photos.py
 
-Заповнює `?` у колонці «Фото» таблиць POI і 🛍️ Місцева особливість —
-через тул `find_photos` віддаленого воркера (Wikimedia Commons).
+Заповнює `?` у колонці «Фото» таблиці «Цікаві POI» та категорій із фото
+(trip.json → poi_categories) — через тул `find_photos` віддаленого воркера
+(Wikimedia Commons).
 
 ЧОМУ ПЕРЕПИСАНО. Попередня версія ходила у Wikipedia opensearch і брала
 pageimage найкращого «схожого» результату. На коротких і транслітерованих
@@ -24,14 +25,23 @@ pageimage найкращого «схожого» результату. На к�
 3. Глобальна дедуплікація: один URL не ставиться двом різним POI.
 
 Запит будується як «латинська назва POI + місто» — на Commons латиниця
-працює краще за кирилицю. Для POI без латинської назви в дужках —
-QUERY_OVERRIDES.
+працює краще за кирилицю. Місто/країна — з власної картки місця (H1 + поле
+**Код**), а НЕ з фіксованої таблиці: файли бібліотеки — slug-картки
+(`cc-example-town.md`), не старі `XXXX.md`, тому будь-яка таблиця «файл → місто»
+неминуче старіє і належить даним, а не тулкіту.
+
+Для POI, чию назву автозапит не вгадає (суто кириличні POI без латинської
+форми в дужках), раніше був QUERY_OVERRIDES — ручний список запитів на
+30+ POI старого маршруту. Він видалений: увесь прив'язаний до старих
+`XXXX.md` файлів, під сучасну бібліотеку жоден рядок уже не спрацьовує
+(глоб нижче їх просто не знаходить), а ручні підказки для НОВИХ POI — це
+знання конкретної поїздки, йому місце в даних (напр. окремим полем
+у таблиці POI картки), не в коді тулкіта.
 
 Run (потрібен токен у .env):
     PYTHONPATH=scripts python3 scripts/find_poi_photos.py --dry-run
     PYTHONPATH=scripts python3 scripts/find_poi_photos.py
-    PYTHONPATH=scripts python3 scripts/find_poi_photos.py --only 1300.md
-Далі обовʼязково: python3 scripts/generate_state_from_md.py
+    PYTHONPATH=scripts python3 scripts/find_poi_photos.py --only cc-example-town.md
 """
 import json
 import re
@@ -50,103 +60,38 @@ from trip_ctx import paths
 CTX = paths()
 
 PLACES = CTX.places_dir
+PLACE_META_SKIP = {"country_info.md", "practical_info.md", "CATALOG.md"}
 
-# файл -> (коротка назва для запиту, повний контекст)
-CITY = {
-    "0100.md": ("Kyiv", "Kyiv Ukraine"),
-    "0200.md": ("Chernivtsi", "Chernivtsi Ukraine"),
-    "0280.md": ("Suceava", "Suceava Romania"),
-    "0300.md": ("Sighisoara", "Sighisoara Romania"),
-    "0320.md": ("Piatra", "Piatra Neamt Romania"),
-    "0360.md": ("Lacu", "Lacu Rosu Harghita Romania"),
-    "0380.md": ("Bicazului", "Cheile Bicazului Romania"),
-    "0690.md": ("Valcea", "Ramnicu Valcea Romania"),
-    "0720.md": ("Hurezi", "Hurezi Horezu Romania"),
-    "1080.md": ("Kerkini", "Kerkini Serres Greece"),
-    "1180.md": ("Chalkida", "Chalkida Evia Greece"),
-    "0400.md": ("Brasov", "Poiana Brasov Postavarul Romania"),
-    "0500.md": ("Brasov", "Brasov Romania"),
-    "0550.md": ("Fagaras", "Fagaras Romania"),
-    "0600.md": ("Sibiu", "Sibiu Romania"),
-    "0650.md": ("Transfagarasan", "Balea Transfagarasan Romania"),
-    "0680.md": ("Vidraru", "Vidraru Poenari Arges Romania"),
-    "0700.md": ("Arges", "Curtea de Arges Romania"),
-    "0750.md": ("Craiova", "Craiova Romania"),
-    "0900.md": ("Belogradchik", "Belogradchik Bulgaria"),
-    "1000.md": ("Bansko", "Bansko Pirin Bulgaria"),
-    "1100.md": ("Litochoro", "Litochoro Olympus Greece"),
-    "1150.md": ("Olympus", "Mount Olympus Greece"),
-    "1200.md": ("Arta", "Arta Epirus Greece"),
-    "1250.md": ("Astakos", "Astakos Aetolia Greece"),
-    "1300.md": ("Ithaca", "Ithaca Ionian Greece"),
-    "1400.md": ("Papingo", "Papingo Zagori Vikos Greece"),
-    "1500.md": ("Edessa", "Edessa Macedonia Greece"),
-    "1600.md": ("Melnik", "Melnik Bulgaria"),
-    "1700.md": ("Koprivshtitsa", "Koprivshtitsa Bulgaria"),
-    "1800.md": ("Bucharest", "Bucharest Romania"),
-    "1900.md": ("Chernivtsi", "Chernivtsi Ukraine"),
+# Універсальний факт (код країни ISO 3166-1 → англійська назва), не дані
+# конкретної поїздки — потрібен лише щоб дати Commons запит англійською,
+# на якій пошук працює найкраще.
+COUNTRY_EN = {
+    "UA": "Ukraine", "RO": "Romania", "BG": "Bulgaria", "GR": "Greece",
+    "MK": "North Macedonia", "RS": "Serbia", "HU": "Hungary", "PL": "Poland",
+    "AL": "Albania", "MD": "Moldova",
 }
 
-# POI без латинської назви в дужках — задаємо запит вручну.
-QUERY_OVERRIDES = {
-    ("0500.md", "Strada Sforii"): "Strada Sforii Brasov",
-    ("0500.md", "Strada Republicii"): "Strada Republicii Brasov",
-    ("0550.md", "Рів і вали"): "Fagaras fortress moat Romania",
-    ("0600.md", "Джелато на Piața Mare"): "Piata Mare Sibiu",
-    ("0600.md", "Парк Дубрава (Pădurea Dumbrava)"): "Dumbrava forest Sibiu",
-    ("0650.md", "Північний серпантин (Serpentinele Nordice)"):
-        "Transfagarasan serpentine road Romania",
-    ("0680.md", "Статуя Прометея (Prometeu)"): "Prometeu statue Vidraru Romania",
-    ("0700.md", "Криниця Манолє (Fântâna Meșterului Manole)"):
-        "Fantana Mesterului Manole Curtea de Arges",
-    ("0700.md", "Руїни княжого двору (Curtea Domnească)"):
-        "Curtea Domneasca Curtea de Arges",
-    ("0900.md", "Оглядовий майданчик фортеці"): "Belogradchik fortress rocks view",
-    ("1000.md", "Вулиці Старого Банско"): "Bansko old town houses Bulgaria",
-    ("1100.md", "Вид на Олімп (Mount Olympus viewpoint)"): "Olympus Litochoro Greece",
-    ("1150.md", "Мітікас (Mytikas, 2917 м)"): "Mytikas Olympus summit Greece",
-    ("1150.md", "Притулок Спіліос Агапітос (Refuge A, 2100 м)"):
-        "Spilios Agapitos refuge Olympus",
-    ("1250.md", "Порт Астакос (Astakos Port)"): "Astakos port harbour Greece",
-    ("1250.md", "Набережна Астакоса (Paralia)"): "Astakos Greece waterfront",
-    ("1300.md", "Школа Гомера (School of Homer)"): "School of Homer Stavros Ithaca",
-    ("1500.md", "Квартал млинів біля водоспадів"): "Edessa watermills Greece",
-    ("1600.md", "Винні підвали Мелника"): "Melnik wine cellar Bulgaria",
-    ("1700.md", "Церква Успіння Богородиці"): "Koprivshtitsa church Bulgaria",
-    ("1800.md", "Парк Херестреу (Parcul Herăstrău / Regele Mihai I)"):
-        "Herastrau park Bucharest",
-    ("0280.md", "Оглядова з валів цитаделі"): "Cetatea Suceava fortress",
-    ("0320.md", "Телегондола на Козлу"): "Telegondola Piatra Neamt",
-    ("0320.md", "Княжий двір і церква Св. Іоанна"): "Biserica Sfantul Ioan Piatra Neamt",
-    ("0320.md", "Дзвіниця княжого двору"): "Turnul lui Stefan Piatra Neamt",
-    ("0320.md", "Пішохідна вул. Штефана Великого"): "Piatra Neamt centru",
-    ("0360.md", "Червоне озеро (Lacu Roșu)"): "Lacu Rosu Romania",
-    ("0380.md", "Горло пекла (Gâtul Iadului)"): "Cheile Bicazului gorge",
-    ("0380.md", "Ринок ремісників в ущелині"): "Cheile Bicazului Romania",
-    ("0690.md", "Центральний парк Зевзеконія"): "Ramnicu Valcea park",
-    ("0690.md", "Пішохідна вул. Траян (Calea lui Traian)"): "Calea lui Traian Ramnicu Valcea",
-    ("0720.md", "Розписана галерея собору"): "Manastirea Hurezi",
-    ("0720.md", "Керамічні майстерні Хорезу"): "ceramica Horezu",
-    ("1080.md", "Човнова прогулянка по озеру"): "Kerkini lake boat",
-    ("1080.md", "Водяні буйволи Керкіні"): "Kerkini buffalo",
-    ("1180.md", "Набережна Кріазотоу (Παραλία Κριεζώτου)"): "Chalkida Greece bridge",
-    ("1180.md", "Протока Евріп і старий міст"): "Chalkida Euripus",
-    ("1180.md", "Фортеця Караბаба (Κάστρο Καράμπαμπα)"): "Karababa fortress",
-    ("1180.md", "Церква Св. Параскеви"): "Agia Paraskevi Chalkida",
-    # Додано після другого проходу: POI з суто кириличними назвами, де
-    # автозапит не працює. Кожен запит перевірено вручну через find_photos.
-    ("0750.md", "Парк Ніколає Романеску"): "Parcul Nicolae Romanescu Craiova",
-    ("0750.md", "Каля Уніріі"): "Calea Unirii Craiova",
-    ("1200.md", "Міст Арти (Gefyri tis Artas)"): "Bridge of Arta",
-    ("1200.md", "Замок Арти (Kastro Artas)"): "Arta castle Greece",
-    ("1400.md", "Мегало і Мікро Папінго"): "Papingo village Zagori",
-    ("0400.md", "Канатка Пояна-Брашов → Крістіанул-Маре"): "Poiana Brasov cable car",
-    ("0650.md", "Північний серпантин (Serpentinele Nordice)"):
-        "Transfagarasan road Romania",
-    ("0900.md", "Оглядовий майданчик фортеці"): "Belogradchik rocks",
-    ("0300.md", "Церква домініканського монастиря"): "Sighisoara monastery church",
-    ("1250.md", "Порт Астакос (Astakos Port)"): "Astakos Greece",
-}
+
+def card_city_context(card_text):
+    """H1 картки → (коротка латинська назва, повний контекст «назва країна»).
+
+    H1 виду «Назва / Name (уточнення)» — беремо ОСТАННІЙ сегмент після
+    ` / ` (латинська форма за конвенцією карток), відкидаємо дужки для
+    короткої назви. **Код** дає країну (ISO), звідки — англійська назва
+    з фіксованого (не трипового) словника вище.
+    """
+    m = re.match(r"^#\s+(.+)$", card_text, re.MULTILINE)
+    if not m:
+        return "", ""
+    parts = [p.strip() for p in m.group(1).split(" / ")]
+    latin = next((p for p in reversed(parts)
+                  if re.search(r"[A-Za-zÀ-ž]", p) and not re.search(r"[а-яА-ЯіІїЇєЄґҐ]", p)),
+                 parts[-1])
+    short = re.sub(r"\s*\([^)]*\)", "", latin).strip()
+    cc_m = re.search(r"\*\*Код\*\*\s*\|\s*([A-Z]{2})", card_text)
+    country = COUNTRY_EN.get(cc_m.group(1), "") if cc_m else ""
+    ctx = f"{short} {country}".strip()
+    return short, ctx
 
 # Слова, які не вважаємо характерними — вони є в половині Commons.
 # Родові слова: самі по собі НЕ підтверджують, що це те саме місце.
@@ -273,7 +218,8 @@ def pick(cands, poi_name, variants, city_ctx, used):
             continue
         tt = {stem(t) for t in tokens(title)}
         hit_s = strong & tt
-        # Місто звіряємо по префіксу: Olympus/Olympos, Arges/Argeș — це те саме.
+        # Місто звіряємо по префіксу: транслітерації часто різняться в
+        # останніх літерах (грецьке -os/-us, румунське діакритичне ș/s тощо).
         # Для власних назв такої поблажки НЕ робимо: «prion» не має стати «prionia».
         hit_c = {c for c in city if len(c) >= 4
                  and any(t[:4] == c[:4] for t in tt if len(t) >= 4)}
@@ -299,20 +245,23 @@ def main():
     worker = get_worker(env)
     token = get_access_token(env, worker)
 
+    place_files = sorted(f for f in PLACES.glob("*.md") if f.name not in PLACE_META_SKIP)
+
     used = set()
-    for p in PLACES.glob("[0-9][0-9][0-9][0-9].md"):
+    for p in place_files:
         used.update(re.findall(r"`(https://upload\.wikimedia\.org/[^`]+)`",
                                p.read_text(encoding="utf-8")))
     print(f"вже використано URL: {len(used)}\n")
 
     found = missed = 0
-    for path in sorted(PLACES.glob("[0-9][0-9][0-9][0-9].md")):
+    for path in place_files:
         if only and path.name != only:
             continue
-        short_name, city_ctx = CITY.get(path.name, ("", ""))
+        card_text = path.read_text(encoding="utf-8")
+        short_name, city_ctx = card_city_context(card_text)
         if not city_ctx:
             continue
-        lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+        lines = card_text.splitlines(keepends=True)
         touched = False
 
         for i, line in enumerate(lines):
@@ -327,13 +276,7 @@ def main():
 
             variants = latin_variants(poi)
             short = short_name
-            override = QUERY_OVERRIDES.get((path.name, poi))
-            if override:
-                # Запит написаний людиною — беремо його слова як характерні,
-                # інакше для суто кириличних назв «сильних» токенів немає взагалі.
-                qlist, variants = [override], [override]
-            else:
-                qlist = queries(poi, variants, short, city_ctx)
+            qlist = queries(poi, variants, short, city_ctx)
 
             best = None
             for q in qlist:
@@ -360,7 +303,7 @@ def main():
 
     print(f"\n{'[DRY RUN] ' if dry else ''}знайдено {found}, без результату {missed}")
     if not dry and found:
-        print("Далі: python3 scripts/generate_state_from_md.py")
+        print("Далі: python3 scripts/generate_state.py")
 
 
 if __name__ == "__main__":

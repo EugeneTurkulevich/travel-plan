@@ -22,8 +22,7 @@ Usage:
 """
 import sys
 
-from build_schedule import DAYS, DAY_BUFFER, FERRY_MIN, ISLAND, dur, r15
-from osrm_legs import leg
+from build_schedule import DAYS, DAY_BUFFER, dur, r15, leg_minutes, is_ferry_leg
 
 
 def main():
@@ -39,16 +38,14 @@ def main():
     over = []
     for day in DAYS:
         stops = day["stops"]
-        legs = []
-        for (a, _, _), (b, _, _) in zip(stops, stops[1:]):
-            legs.append(FERRY_MIN if {a, b} & ISLAND else leg(a, b)[1])
+        legs = [leg_minutes(a, b) for (a, _, _), (b, _, _) in zip(stops, stops[1:])]
         clean = sum(legs) or 1
         k = (clean + DAY_BUFFER) / clean * day["friction"]
 
         drive = ferry = 0
         for i, ((a, _, _), (b, _, _)) in enumerate(zip(stops, stops[1:])):
             seg = r15(legs[i] * k)
-            if {a, b} & ISLAND:
+            if is_ferry_leg(a, b):
                 ferry += seg
             else:
                 drive += seg
@@ -69,9 +66,9 @@ def main():
         return 0
     print(f"❌ порушень: {len(over)} — "
           + ", ".join(f"D{d} ({dur(m)})" for d, m in over))
-    print("\nЗауваж: D1 і D17 — це Київ ⇄ Чернівці (~530 км), вони задані самою "
-          "вимогою «старт з Києва, перша й остання ніч у Чернівцях», і без "
-          "проміжної ночівлі коротшими не стануть.")
+    print("\nЗауваж: перший і останній день (виїзд і повернення) можуть "
+          "законно перевищувати ліміт — вони задані самою відстанню старту й "
+          "фінішу поїздки, і без проміжної ночівлі коротшими не стануть.")
     return 1
 
 

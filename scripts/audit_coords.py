@@ -1,8 +1,8 @@
-"""Audit POI coordinates in places/XXXX.md against OSM Nominatim.
+"""Audit POI coordinates in library place cards against OSM Nominatim.
 
 For each POI in `## Цікаві POI` table:
   1. Build search query from POI name (Latin form preferred, e.g. "Peleș Castle")
-     + city name from FILE_TO_CITY map.
+     + city name derived from the card's own H1 and **Код** field.
   2. Query OSM Nominatim.
   3. Compare current coords to OSM result; flag if distance > 250 m.
 
@@ -25,52 +25,37 @@ from trip_ctx import paths
 CTX = paths()
 
 ROOT = CTX.places_dir          # був абсолютний шлях, якого не існує
-UA = 'travel2026-coord-auditor/0.1 (eugene.turkulevich@gmail.com)'
+UA = 'travel-plan-coord-auditor/0.2 (contact: owner of this repo clone)'
 THRESHOLD_M = 300  # flag mismatches > 300 m
+PLACE_META_SKIP = {'country_info.md', 'practical_info.md', 'CATALOG.md'}
 
-# city context for disambiguation (English form for Nominatim)
-FILE_TO_CITY = {
-    '0100.md': 'Kyiv',
-    '0200.md': 'Chernivtsi',
-    '0300.md': 'Sucevița',
-    '0400.md': 'Voroneț',
-    '0500.md': 'Sinaia',
-    '0550.md': 'Brașov',
-    '0600.md': 'Ruse',
-    '0700.md': 'Ivanovo Bulgaria',
-    '0800.md': 'Veliko Tarnovo',
-    '0900.md': 'Plovdiv',
-    '1000.md': 'Kavala',
-    '1100.md': 'Philippi',
-    '1200.md': 'Thessaloniki',
-    '1300.md': 'Vergina',
-    '1500.md': 'Litochoro',
-    '1600.md': 'Thermopylae',
-    '1650.md': 'Galaxidi',
-    '1700.md': 'Athens',
-    '1710.md': 'Corinth',
-    '1720.md': 'Nafplio',
-    '1730.md': 'Patras',
-    '1740.md': 'Rio Antirrio',
-    '1750.md': 'Nafpaktos',
-    '1760.md': 'Mesolongi',
-    '1800.md': 'Delphi',
-    '1900.md': 'Arachova',
-    '2200.md': 'Meteora',
-    '2300.md': 'Metsovo',
-    '2400.md': 'Ioannina',
-    '2500.md': 'Kastoria',
-    '2700.md': 'Skopje',
-    '2750.md': 'Matka Skopje',
-    '2800.md': 'Rila Monastery',
-    '2900.md': 'Sofia Bulgaria',
-    '3000.md': 'Vidin',
-    '3200.md': 'Horezu',
-    '3300.md': 'Sibiu',
-    '3400.md': 'Alba Iulia',
-    '3500.md': 'Maramureș',
-    '3600.md': 'Rakhiv',
+# Універсальний факт (не дані поїздки): код країни ISO 3166-1 → англійська
+# назва, потрібна лише щоб дати Nominatim запит англійською.
+COUNTRY_EN = {
+    'UA': 'Ukraine', 'RO': 'Romania', 'BG': 'Bulgaria', 'GR': 'Greece',
+    'MK': 'North Macedonia', 'RS': 'Serbia', 'HU': 'Hungary', 'PL': 'Poland',
+    'AL': 'Albania', 'MD': 'Moldova',
 }
+
+
+def card_city_context(card_text):
+    """H1 картки (+ **Код**) → назва для дизамбігуації Nominatim-запиту.
+
+    Раніше це був FILE_TO_CITY — таблиця «файл → місто» під старі `XXXX.md`.
+    Файли бібліотеки тепер slug-картки (`cc-example-town.md`) і самі несуть назву
+    та країну — окрема таблиця була б чужими даними в тулкіті, що старіє
+    щоразу, як бібліотека поповнюється."""
+    m = re.match(r'^#\s+(.+)$', card_text, re.MULTILINE)
+    if not m:
+        return ''
+    parts = [p.strip() for p in m.group(1).split(' / ')]
+    latin = next((p for p in reversed(parts)
+                  if re.search(r'[A-Za-zÀ-ž]', p) and not re.search(r'[а-яА-ЯіІїЇєЄґҐ]', p)),
+                 parts[-1])
+    short = re.sub(r'\s*\([^)]*\)', '', latin).strip()
+    cc_m = re.search(r'\*\*Код\*\*\s*\|\s*([A-Z]{2})', card_text)
+    country = COUNTRY_EN.get(cc_m.group(1), '') if cc_m else ''
+    return f'{short} {country}'.strip()
 
 
 def haversine_m(lat1, lon1, lat2, lon2):
@@ -127,11 +112,13 @@ def parse_pois(md: str):
 
 def main():
     issues = []
-    files = sorted(p for p in ROOT.glob('????.md')
-                   if p.name in FILE_TO_CITY)
+    files = sorted(p for p in ROOT.glob('*.md') if p.name not in PLACE_META_SKIP)
     for f in files:
-        city = FILE_TO_CITY[f.name]
-        pois = parse_pois(f.read_text())
+        card_text = f.read_text()
+        city = card_city_context(card_text)
+        if not city:
+            continue
+        pois = parse_pois(card_text)
         if not pois:
             continue
         print(f'\n=== {f.name} ({city}) ===')

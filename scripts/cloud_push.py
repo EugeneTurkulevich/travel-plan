@@ -351,7 +351,7 @@ def main():
 
     state_path = Path(args.state)
     if not state_path.exists():
-        sys.exit(f"{state_path} не існує — спершу python3 scripts/generate_state_from_md.py")
+        sys.exit(f"{state_path} не існує — спершу python3 scripts/generate_state.py")
 
     state = json.loads(state_path.read_text(encoding="utf-8"))
     payload, warnings = build_payload(state)
@@ -377,7 +377,7 @@ def main():
     if size > 900_000:
         sys.exit(f"payload завеликий ({size} байт) — ліміт документа Firestore 1 МБ. Скороти popup_html/extra_info.")
     if not payload["points"]:
-        sys.exit("route_state.json не містить точок — спершу generate_state_from_md.py")
+        sys.exit("route_state.json не містить точок — спершу generate_state.py")
 
     if args.dry_run:
         print("[DRY RUN] нічого не відправлено в хмару")

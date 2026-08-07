@@ -5,7 +5,7 @@ Generates <дані>/trips/<профіль>/exports/route_state.json з ново
 route.json (порядок, ролі, розклад) + бібліотека places/<id>.md + overlay
 trips/<профіль>/overlay/<id>.md (доповнення для конкретної поїздки).
 
-Це ПОРТ generate_state_from_md.py на нову модель входу — уся логіка складання
+Це ПОРТ попереднього MD-генератора (видаленого, Ф4) на нову модель входу — уся логіка складання
 popup_html / nested_points / extra_info / country_info перенесена звідти
 буквально, включно з відомими вадами (див. коментарі нижче). Що змінюється
 проти старого генератора — див. заголовок задачі / коміт-повідомлення.
@@ -31,7 +31,7 @@ TRIP_JSON    = CTX.trip_json
 HR = "<hr style='border:0;border-top:1px solid #ddd;margin:6px 0'>"
 
 TRIP = CTX.read_json(TRIP_JSON)
-# {"viewpoint": {"icon": "🏰", "section": "Оглядові точки"}, "icecream": {...}, ...}
+# {"<category_key>": {"icon": "<emoji>", "section": "<назва MD-секції>"}, ...}
 # Джерело: trip.json → poi_categories (STRUCTURE_PROPOSAL.md §Н3). Категорія
 # "poi" (базові "Цікаві POI") туди не входить — вона фіксована для всіх
 # поїздок, як і в старому генераторі.
@@ -40,9 +40,10 @@ POI_CATEGORIES = TRIP.get('poi_categories', {})
 BASE_POI_SECTION = 'Цікаві POI'
 
 # type_name — текст, який бачить користувач у nested_points. trip.json дає
-# лише icon + назву MD-секції, НЕ type_name (наприклад, секція "Крафт", але
-# type_name лишається "Крафт-паби" — так було в старому генераторі). Тому
-# type_name лишається зашитим тут, буквально як у generate_state_from_md.py.
+# лише icon + назву MD-секції, НЕ type_name (наприклад, MD-секція може
+# називатись інакше за фіксований підпис). Тому type_name лишається зашитим
+# тут, буквально як у попередньому (видаленому, Ф4) генераторі — незалежно
+# від того, як конкретна поїздка назвала свою MD-секцію.
 TYPE_NAMES = {
     'poi':       'Цікаві місця',
     'viewpoint': 'Оглядові точки',
@@ -51,8 +52,13 @@ TYPE_NAMES = {
     'local':     'Місцева особливість',
 }
 
+# Дефолт на випадок, якщо конкретна поїздка не задала icon для категорії в
+# trip.json → poi_categories. Навмисно нейтральний (не копія нічиєї реальної
+# іконки з жодного профілю) — щоб дефолт сам не ставав чужими даними.
+DEFAULT_ICON = '📍'
 
-# ── Text helpers (ported verbatim from generate_state_from_md.py) ─────────────
+
+# ── Text helpers (ported verbatim from the old MD-based generator) ───────────
 
 def _inline_md(text):
     """Convert **bold** / *italic* inline markdown to HTML."""
@@ -129,9 +135,10 @@ def get_section(md_text, title):
     """Return raw text content of a '## ...title' section.
 
     `title` may be the whole heading text ('Опис', 'Опис (доповнення)') or the
-    part after a leading emoji/token ('Морозиво' matches '## 🍦 Морозиво') —
-    trip.json's poi_categories carries section names without the emoji prefix
-    that the MD files actually use.
+    part after a leading emoji/token (a bare section name matches a heading
+    that starts with an emoji, e.g. '## <emoji> <Section>') — trip.json's
+    poi_categories carries section names without the emoji prefix that the
+    MD files actually use.
 
     Stops at the next '## ' heading OR a '---' rule, whichever comes first.
     Library cards separate every section with '---'; trip overlay files do
@@ -206,8 +213,8 @@ def _table_block(table, icon, title):
     _gelato_block / _craft_block. КАЖНА з трьох мала однакову ваду: `desc`
     береться сирим (row[1].strip()), без прогону через _inline_md — лише
     назва (перша колонка) чиститься strip_md. Це той самий дефект, який
-    задача явно назвала на прикладі _local_block (🛍️); тут він відтворений
-    буквально і для 🍦/🍺 теж — не виправлено навмисно."""
+    задача явно назвала на прикладі _local_block; тут він відтворений
+    буквально і для двох інших категорій теж — не виправлено навмисно."""
     if not table:
         return ''
     lines = []
@@ -243,15 +250,15 @@ def _photos_div(poi_table):
 def build_popup_html(label, desc, poi_table, gelato_table, gelato_cfg,
                       craft_table, craft_cfg, local_table, local_cfg,
                       is_overnight, booking=''):
-    # Оглядові точки (viewpoint) у попап не рендеряться — лишаються тільки як
-    # nested_points, так само як у generate_state_from_md.py (_vp_block).
-    local  = _table_block(local_table, local_cfg.get('icon', '🛍️'),
-                           local_cfg.get('section', 'Місцева особливість'))
+    # Категорія 'viewpoint' у попап не рендериться — лишається тільки як
+    # nested_points, так само як у попередньому генераторі (_vp_block).
+    local  = _table_block(local_table, local_cfg.get('icon', DEFAULT_ICON),
+                           local_cfg.get('section', TYPE_NAMES['local']))
     photos = _photos_div(poi_table)
-    gelato = _table_block(gelato_table, gelato_cfg.get('icon', '🍦'),
-                           gelato_cfg.get('section', 'Морозиво'))
-    craft  = (_table_block(craft_table, craft_cfg.get('icon', '🍺'),
-                            craft_cfg.get('section', 'Крафт'))
+    gelato = _table_block(gelato_table, gelato_cfg.get('icon', DEFAULT_ICON),
+                           gelato_cfg.get('section', TYPE_NAMES['icecream']))
+    craft  = (_table_block(craft_table, craft_cfg.get('icon', DEFAULT_ICON),
+                            craft_cfg.get('section', TYPE_NAMES['craft']))
               if is_overnight else '')
 
     # Час прибуття/перебування рендерить map-server з arrive_at/stay_minutes.
@@ -323,16 +330,16 @@ def build_nested_points(poi_table, vp_table, vp_cfg,
                          gelato_table, gelato_cfg,
                          craft_table, craft_cfg,
                          local_table, local_cfg):
-    # Порядок як у generate_state_from_md.py: poi → viewpoint → icecream →
+    # Порядок як у попередньому генераторі: poi → viewpoint → icecream →
     # craft → local. Фото є лише у poi й local (як у старому генераторі) —
     # craft тут НЕ залежить від is_overnight (на відміну від попап-блоку) —
     # так само, як у старому build_nested_points.
     nested = []
     nested += _nested_from_table(poi_table, 'poi', '⭐', with_photo=True)
-    nested += _nested_from_table(vp_table, 'viewpoint', vp_cfg.get('icon', '🏰'), with_photo=False)
-    nested += _nested_from_table(gelato_table, 'icecream', gelato_cfg.get('icon', '🍦'), with_photo=False)
-    nested += _nested_from_table(craft_table, 'craft', craft_cfg.get('icon', '🍺'), with_photo=False)
-    nested += _nested_from_table(local_table, 'local', local_cfg.get('icon', '🛍️'), with_photo=True)
+    nested += _nested_from_table(vp_table, 'viewpoint', vp_cfg.get('icon', DEFAULT_ICON), with_photo=False)
+    nested += _nested_from_table(gelato_table, 'icecream', gelato_cfg.get('icon', DEFAULT_ICON), with_photo=False)
+    nested += _nested_from_table(craft_table, 'craft', craft_cfg.get('icon', DEFAULT_ICON), with_photo=False)
+    nested += _nested_from_table(local_table, 'local', local_cfg.get('icon', DEFAULT_ICON), with_photo=True)
     return nested or None
 
 
@@ -375,10 +382,10 @@ def build_point(place_id, kind, date_iso, arrive_at=None, stay_minutes=None, nig
     local_cfg  = POI_CATEGORIES.get('local', {})
 
     poi_table    = parse_table(get_section(card_text, BASE_POI_SECTION))
-    vp_table     = parse_table(get_section(card_text, vp_cfg.get('section', 'Оглядові точки')))
-    gelato_table = parse_table(get_section(card_text, gelato_cfg.get('section', 'Морозиво')))
-    craft_table  = parse_table(get_section(card_text, craft_cfg.get('section', 'Крафт')))
-    local_table  = parse_table(get_section(card_text, local_cfg.get('section', 'Місцева особливість')))
+    vp_table     = parse_table(get_section(card_text, vp_cfg.get('section', TYPE_NAMES['viewpoint'])))
+    gelato_table = parse_table(get_section(card_text, gelato_cfg.get('section', TYPE_NAMES['icecream'])))
+    craft_table  = parse_table(get_section(card_text, craft_cfg.get('section', TYPE_NAMES['craft'])))
+    local_table  = parse_table(get_section(card_text, local_cfg.get('section', TYPE_NAMES['local'])))
 
     is_overnight = kind == 'overnight'
 
@@ -432,8 +439,9 @@ def parse_route():
     мерджити нічого не треба: route.json уже несе правильний `nights` на
     єдиному представницькому записі точки (порожні days[].points, напр. день
     відпочинку в середині багатоночівельної зупинки, просто пропускаються).
-    Місце, відвідане двічі (Київ, Чернівці, обидва кордони), дає два окремі
-    записи тут — обидва рази з тієї самої картки бібліотеки, за задумом.
+    Місце, відвідане двічі (старт і фініш кільцевого маршруту, обидва напрямки
+    кордону), дає два окремі записи тут — обидва рази з тієї самої картки
+    бібліотеки, за задумом.
 
     `label`/`lat`/`lon`/`booking_note` — необов'язкові поля на рівні точки:
     властивість конкретної появи (напрямок кордону, текст бронювання), а не

@@ -7,29 +7,32 @@ route.json, а обидва напрямки кожного двобічного
 нейтральну картку, втративши напрямково-специфічні label/координати.
 
 Бронювання і напрямок кордону — властивості КОНКРЕТНОЇ ПОЯВИ точки в
-маршруті, а не самого місця (Чернівці з'являються двічі з різним текстом
-Бронь; кожен кордон — двічі, у різні боки). Тому обидва патчаться в
-route.json на рівні точки, а не в картці бібліотеки.
+маршруті, а не самого місця (місце проміжної ночівлі при заїзді й виїзді
+може з'являтись двічі з різним текстом Бронь; кожен кордон — двічі, у різні
+боки). Тому обидва патчаться в route.json на рівні точки, а не в картці
+бібліотеки.
 
 Джерела — ТІЛЬКИ ЧИТАННЯ:
-  - /Users/eugenet/GitHub/travel202609/places/*.md   (архівні картки старої
+  - <--source>/places/*.md                           (архівні картки старої
     моделі — звідти читається рядок `| **Бронь** | … |`)
-  - travel-data/_migration/slugmap.json              (file → slug, злиття)
+  - travel-data/_migration/slugmap.json              (file → slug, злиття,
+    напрямкові перекриття label/lat/lon для кордонів — `border_overrides`)
 
 Пишеться:
   - route.json АКТИВНОГО профілю (через trip_ctx) — додається `booking_note`
-    на кожну появу, де джерело мало Бронь, і `label`/`lat`/`lon` — на 4 появи
-    кордонів (значення взяті дослівно з еталона
-    travel202609/places/exports/route_state.json, за вказівкою). Решта
+    на кожну появу, де джерело мало Бронь, і `label`/`lat`/`lon` — на появи
+    кордонів за `slugmap.json → border_overrides` (значення там узяті
+    дослівно з еталона старого репо, за вказівкою власника даних). Решта
     route.json не чіпається — файл читається, точково допатчується, пишеться
     назад, а не збирається з нуля.
 
 Ідемпотентний: другий прогін дає той самий route.json.
 
 Usage:
-    python3 scripts/patch_route_bookings.py            # патчить route.json
-    python3 scripts/patch_route_bookings.py --dry-run  # тільки друкує план
+    python3 scripts/patch_route_bookings.py --source ~/GitHub/travel202609
+    python3 scripts/patch_route_bookings.py --source ~/GitHub/travel202609 --dry-run
 """
+import argparse
 import json, re, sys
 from pathlib import Path
 
@@ -37,29 +40,35 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from trip_ctx import paths
 CTX = paths()
 
-OLD_PLACES = Path('/Users/eugenet/GitHub/travel202609/places')   # тільки читати
 SLUGMAP    = CTX.data_root / '_migration' / 'slugmap.json'
 ROUTE_JSON = CTX.route_json
 
-# Появи кордонів, що потребують напрямкового перекриття label/lat/lon.
-# Ключ — (slug, індекс появи в route.json, рахуючи з 0). Значення — дослівно
-# з еталона travel202609/places/exports/route_state.json (задача явно дала ці
-# числа — не виводяться, не вгадуються).
-BORDER_OVERRIDES = {
-    ('border-ro-ua-siret-porubne', 0):      {'label': 'Кордон UA→RO: Порубне',    'lat': 47.9877, 'lon': 26.0615},
-    ('border-bg-gr-kulata-promachonas', 0): {'label': 'Кордон BG→GR: Кулата',     'lat': 41.3417, 'lon': 23.37},
-    ('border-bg-gr-kulata-promachonas', 1): {'label': 'Кордон GR→BG: Промахонас', 'lat': 41.335,  'lon': 23.3689},
-    ('border-ro-ua-siret-porubne', 1):      {'label': 'Кордон RO→UA: Сірет',      'lat': 47.9877, 'lon': 26.0615},
-}
+
+def load_border_overrides(slugmap):
+    """slugmap.json → border_overrides: [{"slug","occurrence","label","lat",
+    "lon"}, ...] → {(slug, occurrence): {"label","lat","lon"}}.
+
+    Появи кордонів, що потребують напрямкового перекриття label/lat/lon —
+    рішення КОНКРЕТНОЇ міграції (координати взяті дослівно з еталона
+    старого репозиторію), тому в даних (slugmap.json), а не літералом тут
+    (STRUCTURE_PROPOSAL §7). occurrence — індекс появи в route.json,
+    рахуючи з 0."""
+    out = {}
+    for row in slugmap.get('border_overrides', []):
+        out[(row['slug'], row['occurrence'])] = {
+            'label': row['label'], 'lat': row['lat'], 'lon': row['lon'],
+        }
+    return out
 
 
 def parse_booking(md_text):
-    """Той самий регекс, що й generate_state_from_md.py::parse_booking."""
+    """Той самий регекс, що й generate_state.py::parse_booking (портовано з
+    первісного MD-генератора, з тих пір видаленого — Ф4)."""
     m = re.search(r'\*\*Бронь\*\*\s*\|\s*([^|]+)', md_text)
     return m.group(1).strip() if m else ''
 
 
-def load_bookings_by_slug(slugmap):
+def load_bookings_by_slug(slugmap, old_places):
     """slug → [текст Бронь, ...] у дорожньому порядку появ.
 
     Порядок файлів для злитих карток береться зі slugmap['merge'] (там він
@@ -67,8 +76,8 @@ def load_bookings_by_slug(slugmap):
     файл зі slugmap['route']. Slug без жодного тексту Бронь у джерелах у
     результат не потрапляє (кордони, home-точки тощо).
     """
-    route_map = slugmap['route']          # {"0200.md": "ua-chernivtsi", ...}
-    merge     = slugmap.get('merge', {})  # {"ua-chernivtsi": ["0200.md","1900.md"], ...}
+    route_map = slugmap['route']          # {"0200.md": "cc-example", ...}
+    merge     = slugmap.get('merge', {})  # {"cc-example": ["0200.md","1900.md"], ...}
 
     slug_files = {}
     for fname, slug in route_map.items():
@@ -80,7 +89,7 @@ def load_bookings_by_slug(slugmap):
     for slug, files in slug_files.items():
         texts = []
         for fname in files:
-            path = OLD_PLACES / fname
+            path = old_places / fname
             if not path.exists():
                 continue
             text = parse_booking(path.read_text(encoding='utf-8'))
@@ -92,10 +101,18 @@ def load_bookings_by_slug(slugmap):
 
 
 def main():
-    dry_run = '--dry-run' in sys.argv
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('--source', required=True, help='корінь travel202609 (тільки читання)')
+    ap.add_argument('--dry-run', action='store_true', help='нічого не писати, лише показати план')
+    args = ap.parse_args()
+
+    old_places = Path(args.source).expanduser().resolve() / 'places'
+    if not old_places.exists():
+        raise SystemExit(f'❌ Джерела немає: {old_places}')
 
     slugmap = json.loads(SLUGMAP.read_text(encoding='utf-8'))
-    bookings_by_slug = load_bookings_by_slug(slugmap)
+    bookings_by_slug = load_bookings_by_slug(slugmap, old_places)
+    border_overrides = load_border_overrides(slugmap)
 
     route = CTX.read_json(ROUTE_JSON)
 
@@ -118,7 +135,7 @@ def main():
                 n_booking += 1
                 print(f"  [booking ] {slug} #{idx}: {text!r}")
 
-            override = BORDER_OVERRIDES.get((slug, idx))
+            override = border_overrides.get((slug, idx))
             if override:
                 pt.update(override)
                 n_override += 1
@@ -127,7 +144,7 @@ def main():
     print(f"\nbooking_note: {n_booking} появ")
     print(f"label/lat/lon overrides: {n_override} появ")
 
-    if dry_run:
+    if args.dry_run:
         print("[DRY RUN] route.json не записано")
         return
 

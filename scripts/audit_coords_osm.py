@@ -38,7 +38,7 @@ scratch-файл, тож повторний прогін не б'є по API.
 
 Usage:
     python3 scripts/audit_coords_osm.py                 # усі місця
-    python3 scripts/audit_coords_osm.py --only 1300.md
+    python3 scripts/audit_coords_osm.py --only gr-example.md
     python3 scripts/audit_coords_osm.py --warn 0.5      # інший поріг, км
     python3 scripts/audit_coords_osm.py --refresh       # ігнорувати кеш
 """
@@ -62,9 +62,21 @@ PLACES = CTX.places_dir
 CACHE = CTX.cache_dir / "osm-audit.json"
 OVERPASS = "https://overpass-api.de/api/interpreter"
 RADIUS_KM = 15
-# Секції, які не звіряємо: це заклади й товари, а не картографічні обʼєкти.
-SKIP_SECTIONS = ("Крафт", "Морозиво", "Місцева особливість")
 WARN_KM = 1.0
+
+# Секції, які не звіряємо: заклади й товари (паби, джелатерії, крамниці), не
+# картографічні обʼєкти — OSM про них здебільшого нічого не знає. ЯКІ саме
+# категорії це для цієї поїздки — питання довільного вибору trip.json →
+# poi_categories (STRUCTURE_PROPOSAL §Н3), не тулкіта: категорія позначається
+# `"skip_geo_audit": true` (розширення схеми trip.json поруч із
+# `needs_overnight`, тим самим принципом — нічого не вгадуємо фіксованим
+# списком). Без позначки категорія звіряється як звичайна.
+TRIP = CTX.read_json(CTX.trip_json, default={})
+POI_CATEGORIES = TRIP.get("poi_categories", {})
+SKIP_SECTIONS = tuple(
+    cfg["section"] for cfg in POI_CATEGORIES.values()
+    if cfg.get("skip_geo_audit") and cfg.get("section")
+)
 
 # Типи обʼєктів, серед яких шукаємо відповідники нашим POI.
 # ⚠️ Тільки конкретні значення і тільки з ["name"]: bare-key фільтр на кшталт
@@ -243,7 +255,8 @@ def main():
             cache = {}
 
     flagged, checked, skipped = [], 0, 0
-    for path in sorted(PLACES.glob("[0-9][0-9][0-9][0-9].md")):
+    place_meta_skip = {"country_info.md", "practical_info.md", "CATALOG.md"}
+    for path in sorted(f for f in PLACES.glob("*.md") if f.name not in place_meta_skip):
         if only and path.name != only:
             continue
         lat, lon, rows = parse_place(path)

@@ -20,16 +20,16 @@ MD → route_state.json → set_route — перезаписує ВЕСЬ route-
     свідомо взяти хмарні.
 
 ЧОРНИЙ СПИСОК. `find_poi_photos.py` шукає по назві через opensearch/Commons і
-на коротких або транслітерованих назвах видає омоніми: «Bâlea Lac» → місячний
-кратер Lacus Timoris, «Prionia» → молекула пріона, «Anogi» → анатомічна
-ілюстрація, «Astakos paralia» → жук Trogoderma paralia, «Golden Gate» → міст у
-Сан-Франциско. Список нижче — результат ручного аудиту 110 фото (03.08.2026).
+на коротких або транслітерованих назвах видає омоніми: топонім острова
+підхопив місячний кратер з такою ж назвою, назва набережної — вид жука-омоніма,
+назва брами — міст у Сан-Франциско з такою ж назвою. Список нижче — результат
+ручного аудиту 110 фото цієї бібліотеки.
 
 Run (потрібен токен у .env):
     PYTHONPATH=scripts python3 scripts/merge_cloud_photos.py --dry-run
     PYTHONPATH=scripts python3 scripts/merge_cloud_photos.py
     PYTHONPATH=scripts python3 scripts/merge_cloud_photos.py --take-coords
-Далі обовʼязково: python3 scripts/generate_state_from_md.py
+Далі обовʼязково: python3 scripts/generate_state.py
 """
 import json
 import re
@@ -195,7 +195,7 @@ def main():
           f"розбіжностей координат: {coords}"
           f"{' (узято)' if take_coords else ' (лише показано)'} · знято хибних: {cleared}")
     if not dry:
-        print("Далі: python3 scripts/generate_state_from_md.py")
+        print("Далі: python3 scripts/generate_state.py")
 
 
 if __name__ == "__main__":
