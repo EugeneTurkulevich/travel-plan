@@ -212,7 +212,10 @@ def build_route_md(ctx, cards):
 def main(argv):
     parser = argparse.ArgumentParser(description="Генерує ROUTE.md і CATALOG.md з даних")
     parser.add_argument("--dry-run", action="store_true", help="тільки надрукувати, нічого не писати")
-    args = parser.parse_args(argv[1:])
+    # --data/--trip розбирає сам trip_ctx.paths() (з повного sys.argv, до parse_args,
+    # див. CTX = paths() вище) — parse_known_args лише не дає argparse впасти на них тут
+    # (та сама конвенція, що й у sync_from_map.py/check_threads.py).
+    args, _unknown = parser.parse_known_args(argv[1:])
 
     cards = load_cards(CTX.places_dir)
     usage = collect_usage(CTX.data_root)

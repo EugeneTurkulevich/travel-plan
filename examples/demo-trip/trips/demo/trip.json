@@ -1,0 +1,16 @@
+{
+ "_note_map_id": "Демо-профіль навмисно без map_id — карти немає, це вигаданий набір лише для показу скриптів/скілів на клоні без приватних даних.",
+ "id": "demo",
+ "title": "Демо: вихідні в горах (вигадані дані)",
+ "start": "2030-06-06",
+ "end": "2030-06-07",
+ "countries": ["ZZ"],
+ "tz_default": "+02:00",
+ "tz_overrides": {},
+ "worker": "https://trip-map-mcp.e--t.workers.dev",
+ "status": "active",
+ "poi_categories": {
+  "local": { "icon": "🎁", "section": "Гірський виріб" },
+  "viewpoint": { "icon": "🔭", "section": "Огляд" }
+ }
+}

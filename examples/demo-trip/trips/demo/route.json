@@ -1,0 +1,44 @@
+{
+ "_": "Демонстраційний маршрут: 2 дні, 3 точки. Показує обидва типові kind (overnight/visit), одну ночівлю на день, і те, що точка з nights не дублюється в дні вилазки.",
+ "trip": "demo",
+ "days": [
+  {
+   "day": 1,
+   "date": "2030-06-06",
+   "start": "09:00",
+   "friction": 1.10,
+   "points": [
+    {
+     "id": "zz-kamyanyi-brid",
+     "kind": "overnight",
+     "nights": 1,
+     "arrive_at": "2030-06-06T17:30+02:00",
+     "stay_minutes": 930,
+     "booking_note": "🛏️ 1 ніч, демонстраційна база"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "date": "2030-06-07",
+   "start": "09:00",
+   "friction": 1.15,
+   "points": [
+    {
+     "id": "zz-sokolyny-pereval",
+     "kind": "visit",
+     "arrive_at": "2030-06-07T11:15+02:00",
+     "stay_minutes": 120
+    },
+    {
+     "id": "zz-lisove-ozero",
+     "kind": "overnight",
+     "nights": 1,
+     "arrive_at": "2030-06-07T16:00+02:00",
+     "stay_minutes": 960,
+     "booking_note": "🛏️ 1 ніч, демонстраційна база"
+    }
+   ]
+  }
+ ]
+}
