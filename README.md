@@ -110,4 +110,4 @@ python3 scripts/check_no_data.py
 
 ## Ліцензія
 
-Ще не обрана.
+[MIT](LICENSE).

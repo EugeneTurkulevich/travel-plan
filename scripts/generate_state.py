@@ -408,11 +408,21 @@ def build_point(place_id, kind, date_iso, arrive_at=None, stay_minutes=None, nig
     craft_cfg  = POI_CATEGORIES.get('craft', {})
     local_cfg  = POI_CATEGORIES.get('local', {})
 
+    # Категорійні секції (на відміну від BASE_POI_SECTION) — публікуються
+    # ЛИШЕ якщо ця поїздка оголосила категорію в trip.json → poi_categories.
+    # Ключа немає в POI_CATEGORIES → секцію в картці НЕ шукаємо взагалі:
+    # раніше `.get('section', TYPE_NAMES[...])` підставляв дефолтну назву й
+    # усе одно знаходив секцію картки, лишену іншою поїздкою, яка про цю
+    # категорію дбала — trip_rules «не цікавить X» тоді не мали сили.
     poi_table    = parse_table(get_section(card_text, BASE_POI_SECTION))
-    vp_table     = parse_table(get_section(card_text, vp_cfg.get('section', TYPE_NAMES['viewpoint'])))
-    gelato_table = parse_table(get_section(card_text, gelato_cfg.get('section', TYPE_NAMES['icecream'])))
-    craft_table  = parse_table(get_section(card_text, craft_cfg.get('section', TYPE_NAMES['craft'])))
-    local_table  = parse_table(get_section(card_text, local_cfg.get('section', TYPE_NAMES['local'])))
+    vp_table     = parse_table(get_section(card_text, vp_cfg.get('section', TYPE_NAMES['viewpoint']))
+                                if 'viewpoint' in POI_CATEGORIES else '')
+    gelato_table = parse_table(get_section(card_text, gelato_cfg.get('section', TYPE_NAMES['icecream']))
+                                if 'icecream' in POI_CATEGORIES else '')
+    craft_table  = parse_table(get_section(card_text, craft_cfg.get('section', TYPE_NAMES['craft']))
+                                if 'craft' in POI_CATEGORIES else '')
+    local_table  = parse_table(get_section(card_text, local_cfg.get('section', TYPE_NAMES['local']))
+                                if 'local' in POI_CATEGORIES else '')
 
     is_overnight = kind == 'overnight'
 
@@ -473,8 +483,9 @@ def parse_route():
     `label`/`lat`/`lon`/`booking_note` — необов'язкові поля на рівні точки:
     властивість конкретної появи (напрямок кордону, текст бронювання), а не
     самого місця. Коли їх немає — беруться з картки бібліотеки (label/lat/lon)
-    або не рендеряться (booking_note). scripts/patch_route_bookings.py — те,
-    що їх сюди пише.
+    або не рендеряться (booking_note). `booking_note` — ручне поле в
+    `route.json`: sync_from_map.py лише переносить його незмінним
+    (OWN_FIELDS), нічого сюди автоматично не пише.
     """
     route = CTX.read_json(ROUTE_JSON)
     out = []

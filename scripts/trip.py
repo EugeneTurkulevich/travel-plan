@@ -13,6 +13,7 @@ scripts/trip.py
 `show` навмисно друкує map_id повністю: перемикання профілю — це той момент,
 коли треба бачити, куди саме поїде наступний пуш.
 """
+import datetime
 import os
 import re
 import shutil
@@ -382,6 +383,26 @@ def _do_import(argv, profile_id, map_id, trip_dir, placeholder):
             continue
         points_by_date.setdefault(date, []).append(mp)
 
+    # Багатонічна стоянка (kind=overnight, nights>1) покриває nights днів
+    # поспіль від своєї дати — але власну точку маршруту має ЛИШЕ перший
+    # (день заїзду); внутрішні дні без радіальної вилазки (visit-точки з
+    # тією ж датою) не мають ЖОДНОЇ точки і випадали з points_by_date, а
+    # з ними — і з days: 16 днів замість 17 на реальній карті. `nights` —
+    # уже явна ознака довжини стоянки (методичка: «одна точка з nights: N,
+    # клієнт сам розгортає в денні картки») — розгортаємо її дати тут, до
+    # побудови днів. Внутрішній день без власної точки отримує day_points
+    # порожнім — це не костиль, а сам стан моделі: ночівля «відсутня» в
+    # денній картці означає «та сама, що вчора», а не привід дублювати її.
+    all_dates = set(points_by_date)
+    for mp in route_points:
+        nights = mp.get("nights")
+        date = mp.get("date")
+        if mp.get("kind") == "overnight" and date and nights and nights > 1:
+            start = datetime.date.fromisoformat(date)
+            all_dates.update(
+                (start + datetime.timedelta(days=n)).isoformat() for n in range(nights)
+            )
+
     # Пул «щойно заведених карток, які МОЖНА повторно знайти в цьому ж
     # прогоні» — окремо від library_index (реальні картки з диска, звірені
     # sfm.find_library_match за координатами БЕЗ огляду на kind). Той самий
@@ -404,9 +425,9 @@ def _do_import(argv, profile_id, map_id, trip_dir, placeholder):
     self_merge_pool = {k: [] for k in SELF_MERGE_KINDS}
 
     days = []
-    for i, date in enumerate(sorted(points_by_date), start=1):
+    for i, date in enumerate(sorted(all_dates), start=1):
         day_points = []
-        for mp in points_by_date[date]:
+        for mp in points_by_date.get(date, []):
             kind = mp.get("kind")
             pool = self_merge_pool.get(kind) or []
             visible_index = library_index + pool if pool else library_index
@@ -557,6 +578,11 @@ def print_report_import(result, profile_id, map_id, trip_dir):
         print("\n-- Перегенеровано (позначені «Імпортовано з карти», не вичитані людиною) --")
         for slug, title, source in report.regenerated_cards:
             print(f"  {slug}  «{title}»  ← {source}")
+
+    if report.transliterated_slugs:
+        print(f"\n-- Slug виведено транслітерацією, не map_slugs (звір з прийнятою "
+              f"латиницею): {len(report.transliterated_slugs)} --")
+        print("\n".join(report.transliterated_slugs))
 
     print(
         "\n⚠️  Імпорт лосі за визначенням: popup_html — згенерований HTML, розібрати "

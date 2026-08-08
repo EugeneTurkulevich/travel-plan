@@ -64,6 +64,9 @@ def build_mirror(map_id, m, route, alt, marks, places):
        набір і вміст ті самі, а порядок різний щоразу — через це кожен diff
        дзеркала був би шумом. Сортування тут — не «підганяння під очікуване»,
        а умова придатності файлу до порівняння, і воно оголошене в `_alt_order`.
+       Причина (08.08.2026): `live.alt_points` — Firestore map-поле, воно не
+       гарантує порядок ключів між читаннями (на відміну від array-полів).
+       Подано воркеру: `map-server/docs/ALT-POINTS-ORDER-DESIGN.md`.
     """
     pulled_at = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
 

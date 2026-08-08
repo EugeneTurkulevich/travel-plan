@@ -347,7 +347,21 @@ def resolve_new_place_slug(mp_id, name, lat, lon, code, map_slugs, report, conte
         )
         return None
     code_for_slug = code.lower() if code != "?" else "xx"
-    return f"{code_for_slug}-{base}"
+    slug = f"{code_for_slug}-{base}"
+    # Запасний варіант — не гарантія: _UK_TRANSLIT коректний для української,
+    # а назва часто є кириличним фонетичним записом ГРЕЦЬКОЇ/БОЛГАРСЬКОЇ/
+    # РУМУНСЬКОЇ назви (звідки більшість топонімів цього тулкіту), для якої
+    # прийнята латиниця інша (виміряно: «Цагарада» → tsaharada, прийнято
+    # tsagarada; «Копривщиця» → kopryvshchytsia, прийнято koprivshtitsa).
+    # Мова оригіналу з самого кириличного рядка невідома — не вгадуємо,
+    # лише попереджаємо, щоб людина звірила з прийнятою латиницею.
+    report.transliterated_slugs.append(
+        f"  ⚠️ {mp_id}  «{name}» → `{slug}` — {context_label}: slug виведено "
+        f"транслітерацією (немає в map_slugs), може розійтись із прийнятою "
+        f"латиницею для нез-українських топонімів. Звір і за потреби впиши "
+        f"правильний варіант у _migration/slugmap.json → map_slugs[\"{mp_id}\"]."
+    )
+    return slug
 
 
 # ── генерація нової картки («базовий» рівень, § б постановки) ───────────────
@@ -476,6 +490,9 @@ class Report:
         self.alt_kept = []
         self.divergences = []
         self.unresolved_slugs = []   # рядки-помилки: не вдалось вивести slug — ЗУПИНКА
+        self.transliterated_slugs = []  # рядки-попередження: slug виведено транслітерацією
+                                         # (не з map_slugs) — може розійтись із прийнятою
+                                         # латиницею для нез-українських топонімів
         self.regenerated_cards = []  # (slug, title, source) — машинні картки, перегенеровані наново
 
 
@@ -792,6 +809,10 @@ def print_report(report, apply_mode, new_days, old_route_json, new_alternates):
             print(f"  {slug}  «{title}»  ({lat}, {lon})  країна={code}  ← {source}")
     else:
         print("  (нема)")
+
+    print(f"\n-- Slug виведено транслітерацією, не map_slugs (звір з прийнятою "
+          f"латиницею): {len(report.transliterated_slugs)} --")
+    print("\n".join(report.transliterated_slugs) if report.transliterated_slugs else "  (нема)")
 
     print(f"\n-- Картки на перегенерацію (машинний імпорт, § в): {len(report.regenerated_cards)} --")
     if report.regenerated_cards:
