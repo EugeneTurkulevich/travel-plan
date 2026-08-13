@@ -8,6 +8,16 @@ itself measures legs (OSRM), keeps the schedule, versions the route, and
 stores marks, ratings, and participant discussion — this repository answers
 a different question: **where does what gets uploaded to it come from.**
 
+## A guide for the agent-free reader
+
+The map doesn't require an agent on its own: the [Trip Map User
+Guide](docs/USER-GUIDE.en.md) explains how to run a shared trip map by
+hand, in a browser — add points, work out a route with your travel
+companions, browse the change history — no code, no AI required. If
+someone just shared a map with you, or you'd rather plan it yourself,
+start there; this README is about the toolkit that works on top of the
+map together with an agent.
+
 ## Idea
 
 The most expensive thing in planning isn't the route — it's **knowledge

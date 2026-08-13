@@ -1,0 +1,515 @@
+# Trip Map User Guide
+
+*[Українською](USER-GUIDE.md)*
+
+This guide is for someone using [trip-map.web.app](https://trip-map.web.app)
+by hand — through the browser, no agent involved. Everything below can
+be done on your own: add a point, reorder a day, agree on a route with
+your travel companions. In a few places we mention that an AI agent
+connected to the map can also do a given thing — only where the
+interface itself deliberately doesn't offer it.
+
+---
+
+## 1. What this is
+
+Trip Map is a shared trip map that lives online. You and your travel
+companions open the very same map in a browser; one person's changes
+(a new point, a rating, a comment) show up for everyone else right
+away — no files to send around. The map measures distances and travel
+time between stops on its own, keeps a day-by-day schedule, remembers a
+history of changes, and lets several people discuss the places you're
+planning to visit right on the map.
+
+You can connect an AI agent (Claude, ChatGPT, Gemini, and others) to
+the map — it sees the same route and can make changes on your behalf.
+That's optional: everything in this guide is done by hand, no agent
+required.
+
+---
+
+## 2. Getting started
+
+### Signing in
+
+Trip Map is opened through a Google account — the **"Sign in with
+Google"** button on the start screen. There's no other way in.
+
+If this is the server's first encounter with your account, after
+signing in you may see **"Account is waiting for administrator
+approval"** — the server owner has to confirm access manually. This
+happens once; after approval the screen never appears again.
+
+### "My maps"
+
+After signing in you land on **"Your maps — the ones you created or
+joined"**. The same list is always one click away via the **🏠** button
+in the map's top bar.
+
+- **➕ Create map** — type a name in the field above the button and
+  click it. The new map opens right away, empty, with you as owner.
+- **📝 Create draft** — same, but the map is marked as a **draft**: a
+  private workspace that members of your "live" maps can't see. Handy
+  for sketching a route before showing it to the group. Promoting a
+  finished draft to a live map isn't something the interface does —
+  that's a job for an AI agent.
+- **📝 Draft from this map** — appears once some map with a route is
+  already open: creates a new draft and immediately copies the current
+  route into it (useful for experimenting without risking the
+  original).
+- **Join by ID** — type someone else's map ID into the **"other map's
+  ID"** field and click **"Join"**. The owner copies their map's ID via
+  ☰ → "Copy map ID" and sends it to you separately (messenger, email —
+  there's no in-app invitation mechanism).
+- **🗑 (next to a map's name in the list)** — delete the map. Only the
+  owner sees this button. The confirmation warns: **"This is
+  irreversible."**
+- The number of maps you can hold at once is capped by the server
+  (five by default, drafts count toward the same limit) — the
+  administrator can raise or lower it per person.
+
+Every row in the list shows the map's name, member count (👥), and a
+**"draft"** badge if it's a private workspace rather than a live map.
+
+---
+
+## 3. The screen, at a glance
+
+- **The map** — center of the screen: route points, the line between
+  them, marks and alternatives.
+- **Day sidebar** (desktop: on the right) — the route split by date:
+  each day's points, total distance, "Maps"/"Waze" links.
+- **Place card** (left panel, the "info panel") — opens when you click
+  a point on the map or in the sidebar: name, description, photo,
+  rating, discussion, timing and content editors.
+- **Search 🔍** — the field in the map's top bar: looks up an address
+  or place name (via OpenStreetMap) and flies the map there.
+- **☰ Menu** — the app's main menu (see below).
+- **🏠** — "My maps" (the list, and creating new ones).
+- **🔗 Link** — mode for connecting two points with a dashed line
+  (section 7).
+- **▤ Rating** — filters points by rating range (section 7).
+- **Find my location** — a round button above the zoom control (the
+  same control exists on both the main map and a point's detail map)
+  — centers the map on your actual position (needs the browser's
+  location permission).
+- **Satellite** — on the main map, the base layer can only be switched
+  between Esri and OpenStreetMap (☰ → "Map" → dropdown); a satellite
+  layer (🛰) is only available on a point's **detail map** (section 6).
+- **Weather** — a per-day forecast (Open-Meteo) shows up in the sidebar
+  next to the date; up to 16 days out it's an actual forecast, further
+  out it falls back to a 5-year average for that calendar day. Updates
+  automatically, or manually via ☰ → "Refresh weather."
+
+### The ☰ menu
+
+Groups of items (some are visible only to people who can edit the
+route):
+
+- **This map** — the **"✏️ Edit mode"** toggle (turn it off to browse
+  the map without risking an accidental change — every editing button
+  hides; flip it back on the same way), rename the map, **"🔗 Copy map
+  ID"** (for inviting people), **"👥 Members…"**, **"📋 Trip
+  rules…"**, **"🔀 Rebuild segment…"**, **"💾 Export map (JSON)…"**,
+  **"📥 Import map (JSON)…"**.
+- **Agents** — **"🤖 Connect an AI agent…"**, **"🕘 Route history…"**.
+- **Data** — **"📅 Import bookings"**, **"🌦 Refresh weather"**, **"🔄
+  Rebuild legs"** (recompute distances and time from scratch),
+  visibility toggles for resolved marks, alternatives, links between
+  points, **"👻 Map ghost…"**.
+- **Map** — pick the street base layer (Esri / OpenStreetMap).
+- **Account** — sign out.
+
+### On mobile
+
+Instead of two side-by-side panels, there are two bottom sheets you
+switch between with buttons in the bottom-right corner: **📋** — the
+route list, **ℹ️** — the selected point's card. Drag the handle at the
+top of a sheet downward to dismiss it. The detail map has its own
+**📋** ("List") button and a **✕** close button.
+
+---
+
+## 4. Building the route by hand
+
+### Adding a point
+
+Right-click (long-press on a phone) anywhere on the map → **"➕ Add
+route point"** (only visible to people who can edit the route). A form
+opens:
+
+- **Name** — as soon as the form opens, it quietly looks for the
+  nearest settlement (the search radius depends on the current zoom
+  level) and pre-fills its name and coordinates instead of the raw
+  click point — with a visible, dismissible hint. This is a safety net
+  for a mouse click on a low zoom level rarely landing exactly where
+  you meant.
+- **🖼 Photo** — becomes active once you type a name; searches
+  Wikimedia Commons by that name and shows a strip of thumbnails —
+  click one to make it the point's cover photo.
+- **Type**: 📷 Visit, 🛏 Overnight (adds a "Nights" field), 🏠
+  Route start/finish, 🚩 Border crossing.
+- **Date** — required only for the route's start; optional for every
+  other type (the field's label changes to match).
+- **Description** — free text; the **"📖 Wiki"** button pulls a short
+  excerpt from Wikipedia based on the click's coordinates (not the
+  name — that avoids mixing up two places that share a name) and
+  offers to insert it with one click, also dismissible.
+
+Clicking **"Next: position in the route"** continues, and what happens
+next depends on the point's type:
+
+- **Empty route** — the first point you add always becomes the start
+  (🏠), a date is required, and the departure time is fixed at
+  **08:00**. No position is asked for.
+- **🏠 Start/finish on a non-empty route** — the point isn't added as
+  new: you get a choice of **"🏠 Replace start"** / **"🏠 Replace
+  finish"** — the new point takes the existing one's place.
+- **🛏 Overnight with a date** — the server finds where to insert it by
+  date on its own. If another overnight already sits on that date, a
+  **"📅 Overnight date is taken"** dialog offers two options: **"🔁
+  Replace «X»"** (the old overnight becomes an alternative — its rating
+  and discussion stay intact) or **"⬆ Insert before «X»"**.
+- **🛏 Overnight without a date** — a picker, **"After which point
+  should the overnight go?"**, limited to the start and existing
+  overnights (defaults to the last one in the list).
+- **📷/🚩 Visit or border with a date** — looks for points sharing that
+  date and offers to insert "before" one of them; if nothing matches,
+  it falls back to the full position list.
+- **📷/🚩 without a date** — goes straight to the full **"before which
+  point?"** list.
+
+### Start and finish rules
+
+- The route always has exactly one start and (if you want one) one
+  finish — they get replaced, never duplicated.
+- The start **can't be deleted** while any other point remains in the
+  route (the delete button stays disabled, with an explanation in its
+  tooltip). To get rid of the start, either clear the rest of the
+  route first, or replace it with another point via the "add a point"
+  flow above.
+
+### Moving, dragging, editing
+
+- **⇅** (next to a point in the sidebar) — opens a list of positions,
+  "after which point." Reordering **doesn't change the point's date**,
+  only its place in the visiting order — if the point has a booking
+  attached, you'll see a warning first, with the option to continue or
+  cancel.
+- **Dragging a point directly on the map** (edit mode only) — dropping
+  it asks for confirmation: **"Move this route point here?"**, warning
+  that the day's schedule will be recomputed.
+- After moving or swapping, a point gets tagged **"⏱ timing inherited
+  — check it"** — the arrival time and duration carried over from the
+  old position automatically and are worth reviewing by hand.
+- A **timing editor** lives right on the point's card: departure/
+  arrival time, duration, number of nights. The **"🔓 exact time"**
+  button lets you type a value manually instead of the auto-suggested
+  one (toggles back to **"🔒 hide"**).
+- A **content editor** on the same card lets you edit the name, type,
+  description, and extra notes right there, no separate form.
+
+### Deleting
+
+There are two different actions, deliberately:
+
+- **➖ Remove from route** (for 📷/🛏 points) — the point becomes an
+  alternative; its rating and discussion stay intact. You can bring it
+  back into the route with a swap (section 7).
+- **🗑 Delete point permanently** (for 🏠/🚩 — start, finish, border —
+  because these types have no alternatives layer) — the point, its
+  rating, and its discussion are gone for good, with no way back
+  through the interface.
+
+A point with an attached hotel booking is removed from the route the
+same way as any other — the server simply refuses the removal while a
+booking is still attached to it.
+
+---
+
+## 5. The road between points
+
+Between two adjacent points, OSRM (the routing engine) always computes
+one "default" road — even though real roads usually offer several
+options. Right-click **directly on the route line** between two points
+to open two menu items:
+
+- **📍 Drive through here** (edit rights only) — drops a waypoint
+  "hint" on the road: not a full route point (no name, date, or
+  photos), just a technical marker saying "the route must pass exactly
+  here." It splits that leg into two independent sub-legs, each with
+  its own road-variant choice. Drag the hint to fine-tune its position,
+  or remove it from its popup (**"🗑 Remove"**) to merge the sub-legs
+  back into one.
+- **🛣 Road variants** — opens a list of OSRM's alternative roads for
+  that leg (no tolls, faster, a different direction, and so on). Click
+  a candidate to lock it in; the **"↩ Default (OSRM)"** button resets
+  it to the standard route.
+
+Ferries, wherever the route crosses water, appear on the map
+automatically as part of the computed path — there's no separate
+manual ferry control beyond the road-variant picker above, when OSRM
+happens to offer a non-ferry alternative.
+
+---
+
+## 6. A point's detail map
+
+The **"🗺 Detail map"** button at the bottom of a place card opens a
+separate "map within the map" — even if nothing has been added to the
+point yet, it shows the point itself and its surroundings right away.
+
+- **Add a point of interest (POI)** — right-click on the detail map →
+  add a POI: name, category (with an icon; you can also create your
+  own category), description, photo (a URL, or the **"🔍 Find a
+  photo"** button — the same Wikimedia Commons search). Editing — the
+  pencil **✏️** next to the entry in the list; moving — just drag the
+  pin on the map (with confirmation).
+- **🛏 Overnight place** / **🅿️ Parking place** — right-click on the
+  detail map to drop a hotel or parking pin for a specific date.
+  Placing an overnight pin automatically moves the actual route point
+  (the coordinate used to compute distances) onto it. The **"🔗 Anchor
+  the main point here"** button in the pin's popup does the same thing
+  manually at any time — handy if the main point ever got dragged
+  somewhere else while editing.
+- **📌 Extra point** — a free-standing note-pin on the detail map, not
+  tied to the schedule; right-click to remove it.
+- **📏 Straight / 🛣 By road** — a distance ruler (detail map only): the
+  first measures "as the crow flies," the second measures actual road
+  distance and time via OSRM. Click the map to add a measuring point;
+  click the ruler button again to reset.
+- **🛰** — the satellite-layer toggle, specific to the detail map.
+- **🏨 Booking** — shows up in the detail map's header and at the
+  bottom of the place card for any overnight with a name and a date
+  (as long as its checkout date hasn't passed) — opens a Booking.com
+  search prefilled with the dates and coordinates.
+
+---
+
+## 7. Working together
+
+### Members and permissions
+
+☰ → **"👥 Members…"** shows two toggles (only the map owner can change
+them):
+
+- **"Let everyone edit the route"** — off by default. While it's off,
+  only the owner can change the route itself (add/reorder/delete
+  points, edit timing). **Marks and alternative points stay open to
+  every member regardless of this toggle** — commenting, rating, and
+  proposing route candidates is something anyone who joined the map can
+  do.
+- **"Allow joining by ID"** — on by default; turning it off closes the
+  door to new members joining by ID (existing members are unaffected).
+
+The same screen lists members, tagging one **"👑 owner"**, with a
+**"🚫 Ban"** button next to each of the others (owner only) — a banned
+member loses access to the map entirely; **"↩ Unban"** restores it.
+
+### Marks and discussion 💬
+
+Right-click on the map → **"💬 Mark / comment"** — available to any
+member, regardless of route-editing rights. A mark is a pin with text
+and a comment thread under it: anyone can reply, and the mark's author
+can close it with the **"✅"** button (an optional "what got done"
+comment). Closed marks show **"✅ done"** or **"⏭ skipped"**; hide them
+from the map via ☰ → "Hide resolved marks." A comment left by an AI
+agent is signed **"🤖 model"** — so you can tell at a glance who wrote
+it.
+
+### Ratings ★
+
+Every point's card (route points and alternatives alike) has a star
+row: click 1–5 stars to cast your own rating, **🚫** explicitly
+"discards" it (distinct from "haven't rated yet"). The average and
+total vote count from everyone are shown alongside.
+
+The **▤ Rating** button in the top bar filters by rating range: pick a
+segment from 1 to 5 and every point outside that range dims on the map
+(route points and alternatives only — the detail map's points of
+interest aren't touched by this filter). It resets on page reload —
+this is a tool for the current look at the map, not a saved setting.
+
+### Alternative points 🧭
+
+Right-click on the map → **"🧭 Alternative point"** sets up a
+candidate — a place the group is discussing but hasn't put on the
+route yet: name, optional date, type (visit/overnight), comment.
+Alternatives get their own rating and discussion, just like route
+points.
+
+- **✏️** — edit, **🗑** — delete permanently.
+- **⇄** — swap it in for a route point of the same type (you'll pick
+  which one from a list).
+- **➖ Remove from route** (section 4) — the reverse: a route point
+  becomes an alternative.
+- **🔀 Rebuild segment…** (☰, for those who can edit the route) — lets
+  you pick several route points to remove and/or several alternatives
+  to add, all applied in one step.
+
+**🔗 Link** (button in the top bar) — a mode for connecting two points
+with a dashed line: click the first, click the second (you can freely
+pan and zoom the map between clicks). It's how you mark a detour or a
+route shortcut you don't want to draw as an actual change to the path.
+Clicking the dashed line, or the "unlink" button on the point card,
+removes it.
+
+### What's new
+
+Points with unread changes are marked with a dot **●** on the marker
+and in the sidebar — so you can find what changed since your last
+visit without re-reading the whole route.
+
+---
+
+## 8. Bookings
+
+☰ → **"📅 Import bookings"** pulls in Google Calendar entries for the
+period the route covers, finds hotel bookings among them by address,
+and offers a checklist of candidates — pick the ones you want and click
+**"Apply."** An accepted booking automatically becomes an overnight pin
+for the right date and immediately moves that day's route point onto
+it (same as a manual overnight pin, section 6).
+
+The **"🏨 Booking"** button (on a point's card and in the detail map's
+header) shows up for any overnight with a name and a date — whether or
+not it came from an import — and disappears only once its checkout
+date has already passed.
+
+**Google Maps / Waze**, next to each day in the sidebar: **"🗺 Maps"**
+routes through every stop of the day to the hotel (or, if there's an
+overnight or parking pin, straight to that; otherwise, to the day's
+last point); **"🚗 Waze"** goes directly to that same destination, no
+intermediate stops (Waze doesn't support them). Google Maps caps
+intermediate stops at 9 — a yellow note under the buttons warns you
+when there are more.
+
+---
+
+## 9. History
+
+☰ → **"🕘 Route history…"** (visible only to those who can edit the
+route) lists saved revisions: date, author, a short summary, and
+stats (point count, total distance). For each one:
+
+- **👁 View** — that revision's points, laid out by day.
+- **⇄ vs. current** — compare a revision against what's on the map
+  right now.
+- Check two revisions' boxes to compare them against each other with
+  **"⇄ Compare selected."**
+- **▸ changes** — expands a short summary like "+2 points, −1, 3
+  changed (dates: 2…)" relative to the previous revision in the list.
+- **↩ Restore** — brings the map back to the state of the selected
+  revision. This is **append-only**: nothing gets erased — restoring
+  simply writes a new revision containing the old one's content, and
+  the state that was current right before the restore stays in the
+  history too, viewable the same way. The button is unavailable on the
+  newest (current) revision, and for anyone without route-editing
+  rights; if the chosen snapshot includes a point that's since been
+  booked and the map no longer carries, the server declines the
+  restore and explains why.
+
+---
+
+## 10. A few more things
+
+### Map ghost 👻
+
+☰ → **"👻 Map ghost…"** overlays a translucent, view-only route from
+**another one of your maps** on top of the current one — handy for
+comparing two trip ideas, or seeing how this year's route crosses last
+year's. The same menu item opens, swaps, and turns off the ghost (once
+one is active, the first item in the list becomes "❌ Remove ghost").
+The ghost doesn't survive a page reload — it's a temporary, session-only
+overlay.
+
+### Exporting and importing a map as JSON
+
+☰ → **"💾 Export map (JSON)…"** saves the entire route, trip rules,
+name, and the "live" layer (marks, alternatives, overnight/parking
+pins, ratings, links) to a file on your device. **"📥 Import map
+(JSON)…"** does the reverse — reads such a file and fully replaces the
+current map's contents with it (with a warning: this is irreversible
+and discards what was there). Both items are visible only to those who
+can edit the route — useful for a backup, or for moving a route between
+maps.
+
+### Sharing what you're looking at
+
+The browser's address bar updates itself as you select a point, open
+the detail map, or flip through days — there's no separate "share"
+button, just copy the link from the address bar at the moment you want,
+and whoever opens it lands on exactly the same view.
+
+### 📌 Date pins from the agent
+
+Sometimes you'll see a **📌** badge with a date next to a point's own
+date — that's an anchor an AI agent placed when tying the point to an
+external schedule (a ferry with a fixed departure time, say). The
+badge is view-only; there's no way to set or remove such an anchor from
+the interface. If the point's date later drifts from the anchor (say,
+after a recompute triggered by a change elsewhere), the badge turns a
+warning color with a **"DRIFTED"** tooltip — a sign the schedule is
+worth double-checking.
+
+### Connecting an AI agent
+
+☰ → **"🤖 Connect an AI agent…"** gives you a connector address and
+step-by-step instructions for each popular app (Claude, Claude Code,
+ChatGPT, Gemini, Grok, Antigravity). A connected agent acts on your
+behalf — the same permissions and ban status as you personally. This
+is entirely optional: everything in this guide works without an agent.
+
+---
+
+## 11. Frequently asked questions
+
+**I don't see any editing buttons — no ⇅, no 🗑, no "➕ Add point."**
+Check ☰ → "This map" → "✏️ Edit mode" — it might be switched off (a
+guard against accidental edits). If the toggle isn't in the menu at
+all, the map owner hasn't given you route-editing rights yet (section
+7, "Members and permissions"); marks, ratings, and alternatives still
+work regardless.
+
+**Why did the "Booking" button disappear from a point?**
+It only shows up for an overnight with a name and a date, and
+disappears once that stay's checkout date is in the past — there's no
+point searching for a hotel for a date that's already gone.
+
+**Why can't I delete the route's start?**
+As long as any other point remains in the route, the start can't be
+deleted — clear the rest of the route first, or replace the start with
+another point instead (section 4).
+
+**A point's date changed on its own — I didn't touch it.**
+Dates after the start are computed as a chain: shifting the start date,
+or the night count of any overnight earlier in the route, shifts every
+date after it by the same amount. That's expected behavior, not a bug.
+
+**I can't insert an overnight before an already-booked date.**
+If a paid booking sits further down the route, inserting a new
+overnight BEFORE it in a way that would shift its date is blocked on
+purpose — to keep the route from silently drifting out of sync with a
+real booking. Changing the booked point's own date directly (with a
+warning), or actions that don't shift it, remain available.
+
+**What does the "⏱ timing inherited — check it" badge mean?**
+The point was just moved or swapped with an alternative, and its
+arrival time/duration carried over automatically from its old
+position. Worth opening the timing editor and adjusting by hand if
+needed.
+
+**I deleted a point and it's still in the alternatives list.**
+That's expected for "➖ Remove from route" — the point doesn't
+disappear, it moves to alternatives along with its rating and
+discussion. Only "🗑" (available for start/finish/border) or the "🗑"
+on the alternative itself deletes for good.
+
+**A write conflict — "The map just changed."**
+Someone else (a person or an agent) was making a change at the same
+moment. The fresh state is already on screen — just repeat the action.
+
+**Can I roll the route back to yesterday's state?**
+Yes — ☰ → "Route history…" → pick the revision you want → "↩
+Restore." Nothing is lost: today's state stays in the history right
+alongside it, just as accessible.
