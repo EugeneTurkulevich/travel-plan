@@ -140,6 +140,21 @@ top of a sheet downward to dismiss it. The detail map has its own
 
 ---
 
+### Mobile details worth knowing
+
+- On a driving day (from two hours before departure until two hours
+  after arrival) the list button 📋 in the bottom-right **pulses** — a
+  reminder that today is a road day. Tapping it on any trip day scrolls
+  the list straight to today's date.
+- When a place card opens, the map nudges itself so the place stays
+  visible above the card — whether you picked it from the list, tapped
+  its marker, or flipped through points with the **‹ ›** buttons in the
+  card header (they genuinely switch the selected point on the map).
+- Tapping a colored country badge at the bottom only zooms the map to
+  your drive through that country (tap again for the next stretch if
+  you cross it twice); the country info opens via the separate **i**
+  button on the right side of the badge.
+
 ## 4. Building the route by hand
 
 ### Adding a point
