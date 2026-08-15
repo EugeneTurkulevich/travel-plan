@@ -466,6 +466,17 @@ the detail map, or flip through days — there's no separate "share"
 button, just copy the link from the address bar at the moment you want,
 and whoever opens it lands on exactly the same view.
 
+### App updates
+
+The map updates itself. When a new version ships, the tab quietly
+reloads and shows a brief **"✅ App updated to the latest version"**
+message — nothing to confirm, and the old "Update" banner with its
+button is gone. The point you had open and your current view come back
+after the reload (they live in the page address). If you happen to be
+typing in a field, the update waits until you leave it, so nothing
+half-written is lost. The current version is always shown at the
+bottom of the ☰ menu.
+
 ### 📌 Date pins from the agent
 
 Sometimes you'll see a **📌** badge with a date next to a point's own
