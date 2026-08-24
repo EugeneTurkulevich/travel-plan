@@ -157,6 +157,10 @@ top of a sheet downward to dismiss it. The detail map has its own
   your drive through that country (tap again for the next stretch if
   you cross it twice); the country info opens via the separate **i**
   button on the right side of the badge.
+- The colored dot in the top-right corner shows the connection state:
+  **green** — connected, **yellow** — connecting, **red** — no link to
+  the server and the map is shown from the offline cache (changes will
+  catch up as soon as the connection returns).
 
 ## 4. Building the route by hand
 
