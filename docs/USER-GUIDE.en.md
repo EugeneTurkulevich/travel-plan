@@ -91,7 +91,11 @@ Every row in the list shows the map's name, member count (👥), and a
   each day's points, total distance, "Maps"/"Waze" links.
 - **Place card** (left panel, the "info panel") — opens when you click
   a point on the map or in the sidebar: name, description, photo,
-  rating, discussion, timing and content editors.
+  rating, discussion, timing and content editors. The photo is a
+  carousel of all the place's pictures (‹ › arrows, or swipe on
+  mobile; the caption names the POI each photo belongs to); clicking
+  or tapping a photo opens it fullscreen (flip with the arrows, the
+  ← → keys or a swipe; close with Esc, ✕ or a tap on the backdrop).
 - **Search 🔍** — the field in the map's top bar: looks up an address
   or place name (via OpenStreetMap) and flies the map there.
 - **☰ Menu** — the app's main menu (see below).
