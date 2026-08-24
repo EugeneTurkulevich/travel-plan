@@ -123,6 +123,9 @@ route):
   rules…"**, **"🔀 Rebuild segment…"**, **"💾 Export map (JSON)…"**,
   **"📥 Import map (JSON)…"**.
 - **Agents** — **"🤖 Connect an AI agent…"**, **"🕘 Route history…"**.
+  On a phone the agent-connection item is hidden (connecting is done
+  from a computer), so the group shows up only for people who have
+  **"Route history…"** — that is, editing rights.
 - **Data** — **"📅 Import bookings"**, **"🌦 Refresh weather"**, **"🔄
   Rebuild legs"** (recompute distances and time from scratch),
   visibility toggles for resolved marks, alternatives, links between
@@ -495,6 +498,8 @@ step-by-step instructions for each popular app (Claude, Claude Code,
 ChatGPT, Gemini, Grok, Antigravity). A connected agent acts on your
 behalf — the same permissions and ban status as you personally. This
 is entirely optional: everything in this guide works without an agent.
+On a phone this menu item is absent — connect the agent from a
+computer (once connected, the agent itself works for you anywhere).
 
 ---
 
