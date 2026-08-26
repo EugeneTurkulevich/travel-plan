@@ -416,13 +416,24 @@ discussing a big change ("what if we skip Dubrovnik but get two nights
 in Split?") without touching the current plan and without retelling
 the variant in words.
 
-- Alternatives are created and edited by **AI agents** (via the map's
-  MCP tools); the interface doesn't edit an assembly. Permissions are
+- You can create an alternative right from the interface: ☰ →
+  **"🧭 Route alternatives…"** → **"➕ Create from current route"** —
+  give it a name and a copy of the plan becomes a separate assembly
+  (up to ten per map). Heavier rebuilds and adopting an alternative as
+  the main route remain **AI-agent** work (MCP tools). Permissions are
   the same as for editing the route.
-- ☰ → **"🧭 Route alternatives…"** switches **your personal view**
-  between the main route and the alternatives (the list shows name,
-  author, and how recently each was updated). The choice is yours
-  alone: every member views the map the way they picked.
+- The same menu item switches **your personal view** between the main
+  route and the alternatives (the list shows name, author, and how
+  recently each was updated). The choice is yours alone: every member
+  views the map the way they picked.
+- **✏️ in the banner** opens the assembly editor in place of the route
+  list: "in assembly" checkboxes across all the map's points, order,
+  date, nights, overnight/visit, arrival time — and every change is
+  **immediately visible on the map** without closing the editor (the
+  route line redraws itself moments after each change). "Save" is one
+  step; "Cancel" (or Esc) discards the draft without a trace. Point
+  content (descriptions, photos, POIs) is out of the editor's reach —
+  those are shared point properties, edited in the normal mode.
 - While you're viewing an alternative, an **orange banner "…this is
   NOT the current plan"** hangs at the top with a return button: the
   assembly's dates and times differ from the real plan, and mixing
