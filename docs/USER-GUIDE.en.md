@@ -118,7 +118,10 @@ opens the normal, main view.
 - **Weather** — a per-day forecast (Open-Meteo) shows up in the sidebar
   next to the date; up to 16 days out it's an actual forecast, further
   out it falls back to a 5-year average for that calendar day. Updates
-  automatically, or manually via ☰ → "Refresh weather."
+  automatically, or manually via ☰ → "Refresh weather." Alongside the
+  weather, each day card shows the sun: ☀️ sunrise time before the
+  day's first item and 🌅 sunset time after the last one (and on a
+  point's detail map — the range across all nights).
 
 ### The ☰ menu
 
