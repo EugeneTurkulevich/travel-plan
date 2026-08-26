@@ -2,7 +2,8 @@
 scripts/pull_map.py
 
 READ-ONLY знімок хмарної карти в локальний файл. Жодного write-тула не
-викликає — лише get_map/get_route/list_alt_route/list_marks/get_places.
+викликає — лише get_map/get_route/list_alt_route/list_marks/get_places/
+list_alts/get_route_brief.
 
 НАВІЩО. Карта — спільна й живе окремо від репозиторію (CLAUDE.md, «Три
 рівні»): маршрут, альтернативи, мітки, рейтинги, треди — усе там може
@@ -13,8 +14,9 @@ live_mirror.json: дзеркало, не джерело істини. Джере
 карта; редагувати цей файл руками безглуздо — наступний запуск перезапише.
 
 merge_cloud_photos.py вже робив вужчу версію того самого (тягнув лише
-фото POI з get_route). Цей скрипт — загальний «pull-before-push»: пʼять
-тулів разом, один файл, один людський звіт про розбіжності.
+фото POI з get_route). Цей скрипт — загальний «pull-before-push»: шість
+тулів разом (плюс по одному get_route_brief на кожну збірку-альтернативу
+з list_alts), один файл, один людський звіт про розбіжності.
 
 Usage:
     python3 scripts/pull_map.py              # знімок активного профілю
@@ -34,20 +36,31 @@ from cloud_push import CTX, call_tool, get_access_token, get_worker, load_env_fi
 
 
 def pull(worker, token, map_id):
-    """Пʼять read-тулів по черзі. Жодного виклику, що пише на карту."""
+    """Шість read-тулів по черзі, жодного виклику, що пише на карту — плюс
+    get_route_brief один раз на кожну збірку-альтернативу, яку віддав
+    list_alts (окремий шар route_alts, не list_alt_route/`alt`: та — точки-
+    кандидати, це — цілі альтернативні збірки маршруту)."""
     m = call_tool(worker, token, "get_map", {"map_id": map_id})
     route = call_tool(worker, token, "get_route", {"map_id": map_id})
     alt = call_tool(worker, token, "list_alt_route", {"map_id": map_id})
     marks = call_tool(worker, token, "list_marks", {"map_id": map_id})
     places = call_tool(worker, token, "get_places", {"map_id": map_id})
-    return m, route, alt, marks, places
+    list_alts_result = call_tool(worker, token, "list_alts", {"map_id": map_id})
+    alt_briefs = {}
+    for a in (list_alts_result.get("alts") or []):
+        alt_id = a.get("alt_id")
+        if not alt_id:
+            continue
+        alt_briefs[alt_id] = call_tool(worker, token, "get_route_brief",
+                                        {"map_id": map_id, "alt_id": alt_id})
+    return m, route, alt, marks, places, list_alts_result, alt_briefs
 
 
-def build_mirror(map_id, m, route, alt, marks, places):
+def build_mirror(map_id, m, route, alt, marks, places, list_alts_result, alt_briefs):
     """Точний формат — контракт. Масиви йдуть як віддав тул, без нормалізації;
     порожні поля — {}/[], ніколи null.
 
-    ДВА свідомі рішення, обидва оголошені в самому файлі:
+    ТРИ свідомі рішення, усі оголошені в самому файлі:
 
     1. `route` і `alt` беремо ЦІЛКОМ, а не за списком полів. Перша редакція
        контракту перелічувала для route points/booked/ratings/threads/links/
@@ -67,6 +80,18 @@ def build_mirror(map_id, m, route, alt, marks, places):
        Причина (08.08.2026): `live.alt_points` — Firestore map-поле, воно не
        гарантує порядок ключів між читаннями (на відміну від array-полів).
        Подано воркеру: `map-server/docs/ALT-POINTS-ORDER-DESIGN.md`.
+
+    3. Шар збірок-альтернатив маршруту (`route_alts`, окремо від `alt` —
+       той шар про точки-кандидати з list_alt_route) — теж беремо ЦІЛКОМ:
+       `list_alts` як є (порядок його `alts` лишаємо — детермінований,
+       updated_at desc), плюс по одному `get_route_brief(alt_id)` на кожну
+       збірку з відповіді. Ключі словника `briefs` сортуємо за alt_id — сам
+       список збірок міг прийти в тому самому порядку щоразу (updated_at
+       desc), але порядок ключів словника не гарантований, і без сортування
+       diff файлу був би шумом так само, як з alt.points у пункті 2.
+       `diff_alts` свідомо НЕ кладемо в дзеркало: це похідний звіт
+       (порівняння двох збірок чи ревізій), не стан карти — рахується на
+       вимогу, а не тягнеться про запас.
     """
     pulled_at = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
 
@@ -81,6 +106,10 @@ def build_mirror(map_id, m, route, alt, marks, places):
     alt_all["points"] = sorted(alt.get("points") or [], key=lambda p: p.get("id") or "")
     alt_all["links"] = alt_all.get("links") or []
     alt_all["ratings"] = alt_all.get("ratings") or {}
+
+    route_alts = dict(list_alts_result)        # вербатим, за принципом п.1
+    route_alts["alts"] = route_alts.get("alts") or []
+    route_alts["briefs"] = {alt_id: alt_briefs[alt_id] for alt_id in sorted(alt_briefs)}
 
     return {
         "_": (
@@ -97,9 +126,11 @@ def build_mirror(map_id, m, route, alt, marks, places):
         "members_count": m.get("members_count") or 0,
         "_alt_order": ("alt.points відсортовано за id: воркер віддає їх у "
                        "нестабільному порядку, а дзеркало має бути придатним "
-                       "до diff. Решта масивів — як віддав тул."),
+                       "до diff. Решта масивів — як віддав тул. Ключі "
+                       "route_alts.briefs — за alt_id, з тієї ж причини."),
         "route": route_all,
         "alt": alt_all,
+        "route_alts": route_alts,
         "marks": marks.get("marks") or [],
         "places": places,
     }
@@ -130,9 +161,16 @@ def print_report(mirror):
 
     rated_places = len(route["ratings"]) + len(alt["ratings"])
 
+    route_alts = mirror["route_alts"]["alts"]
+
     print(f"маршрут      {len(points)} точки · rev {mirror['rev']}")
     print(f"контент      {poi_total} POI · {poi_with_photo} з фото")
     print(f"альтернативи {len(alt['points'])} · звʼязків {len(alt['links'])}")
+    if route_alts:
+        names = " · ".join(a.get("name") or a.get("alt_id") or "?" for a in route_alts)
+        print(f"збірки       {len(route_alts)} route_alts ({names})")
+    else:
+        print("збірки       0 route_alts")
     print(f"мітки        {len(marks)} · відкритих {open_marks}")
     print(f"обговорення  треди на {len(thread_places)} місцях")
     print(f"рейтинги     {rated_places} місця оцінено")
@@ -175,8 +213,8 @@ def main():
     worker = get_worker(env_vars)
     token = get_access_token(env_vars, worker)
 
-    m, route, alt, marks, places = pull(worker, token, map_id)
-    mirror = build_mirror(map_id, m, route, alt, marks, places)
+    m, route, alt, marks, places, list_alts_result, alt_briefs = pull(worker, token, map_id)
+    mirror = build_mirror(map_id, m, route, alt, marks, places, list_alts_result, alt_briefs)
 
     # Знімок ЧУЖОЇ карти не має права стати дзеркалом профілю: план публікації
     # звірявся б із зовсім іншою картою й не помітив цього.

@@ -350,8 +350,8 @@ def main() -> int:
         env_vars = load_env_file()
         worker = get_worker(env_vars)
         token = get_access_token(env_vars, worker)
-        m, route, alt, marks_raw, places = pull_map.pull(worker, token, map_id)
-        mirror = pull_map.build_mirror(map_id, m, route, alt, marks_raw, places)
+        m, route, alt, marks_raw, places, list_alts_result, alt_briefs = pull_map.pull(worker, token, map_id)
+        mirror = pull_map.build_mirror(map_id, m, route, alt, marks_raw, places, list_alts_result, alt_briefs)
         CTX.write_json(CTX.live_mirror, mirror)
         print(f"↻ дзеркало оновлено ({CTX.live_mirror})\n")
     else:

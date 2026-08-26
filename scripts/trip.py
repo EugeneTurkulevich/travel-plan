@@ -347,8 +347,8 @@ def _do_import(argv, profile_id, map_id, trip_dir, placeholder):
     worker = cloud_push.get_worker(env_vars)
     token = cloud_push.get_access_token(env_vars, worker)
 
-    m, route, alt, marks, places = pull_map_mod.pull(worker, token, map_id)
-    mirror = pull_map_mod.build_mirror(map_id, m, route, alt, marks, places)
+    m, route, alt, marks, places, list_alts_result, alt_briefs = pull_map_mod.pull(worker, token, map_id)
+    mirror = pull_map_mod.build_mirror(map_id, m, route, alt, marks, places, list_alts_result, alt_briefs)
 
     ctx = context(argv, trip_id=profile_id)
     ctx.write_json(ctx.live_mirror, mirror)
