@@ -435,6 +435,11 @@ the variant in words.
   step; "Cancel" (or Esc) discards the draft without a trace. Point
   content (descriptions, photos, POIs) is out of the editor's reach —
   those are shared point properties, edited in the normal mode.
+- **🗑 in the banner** deletes the assembly you're viewing (after a
+  confirmation) and returns you to the main route. Only the assembly
+  itself disappears — order, dates, timings; the route points and
+  their content (descriptions, photos, POIs, ratings) stay untouched.
+  Same rights as for editing assemblies.
 - While you're viewing an alternative, an **orange banner "…this is
   NOT the current plan"** hangs at the top with a return button: the
   assembly's dates and times differ from the real plan, and mixing
