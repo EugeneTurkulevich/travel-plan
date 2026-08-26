@@ -397,8 +397,9 @@ removes it.
 ### Route alternatives 🗺️
 
 An alternative is another **assembly of the same route** on the same
-map: a different set or order of points, its own dates and timings —
-while the points themselves (descriptions, photos, POIs, comments,
+map: a different set or order of points, its own dates, timings,
+nights, and even its own overnight/visit status per point — while the
+points themselves (position, descriptions, photos, POIs, comments,
 ratings) stay shared across all assemblies. It's the tool for
 discussing a big change ("what if we skip Dubrovnik but get two nights
 in Split?") without touching the current plan and without retelling
