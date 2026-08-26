@@ -92,7 +92,8 @@ opens the normal, main view.
 - **The map** — center of the screen: route points, the line between
   them, marks and alternatives.
 - **Day sidebar** (desktop: on the right) — the route split by date:
-  each day's points, total distance, "Maps"/"Waze" links.
+  each day's points, total distance; today's card also carries the
+  "Maps"/"Waze" links.
 - **Place card** (left panel, the "info panel") — opens when you click
   a point on the map or in the sidebar: name, description, photo,
   rating, discussion, timing and content editors. The photo is a
@@ -477,13 +478,19 @@ header) shows up for any overnight with a name and a date — whether or
 not it came from an import — and disappears only once its checkout
 date has already passed.
 
-**Google Maps / Waze**, next to each day in the sidebar: **"🗺 Maps"**
-routes through every stop of the day to the hotel (or, if there's an
-overnight or parking pin, straight to that; otherwise, to the day's
-last point); **"🚗 Waze"** goes directly to that same destination, no
-intermediate stops (Waze doesn't support them). Google Maps caps
-intermediate stops at 9 — a yellow note under the buttons warns you
-when there are more.
+**Google Maps / Waze** in the sidebar — only on **today's** card, and
+only when today has planned driving (past and future days get no
+buttons; the sidebar auto-scrolls to today on open while the date falls
+within the trip): **"🗺 Maps"** routes through every stop of the day to
+the hotel (or, if there's an overnight or parking pin, straight to
+that; otherwise, to the day's last point); **"🚗 Waze"** goes directly
+to that same destination, no intermediate stops (Waze doesn't support
+them). Google Maps caps intermediate stops at 9 — a yellow note under
+the buttons warns you when there are more.
+
+On mobile, on a day with planned driving the map greets you with a
+"Driving today" popup: today's schedule plus two big **Google Maps** /
+**Waze** buttons (shown once per day per browser tab).
 
 ---
 
