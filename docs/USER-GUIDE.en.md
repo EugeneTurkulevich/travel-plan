@@ -149,6 +149,17 @@ route list, **ℹ️** — the selected point's card. Drag the handle at the
 top of a sheet downward to dismiss it. The detail map has its own
 **📋** ("List") button and a **✕** close button.
 
+The mobile version is **view-only for the main map**, regardless of
+your permissions: route editing, point dragging, links 🔗, creating
+alternative points 🧭, and the agent chat are desktop-only. What stays
+on the phone: **marks** (creating and discussing), **ratings** and
+place comments, the "What's new" indicators, and switching route
+alternatives. A point's **detail map** keeps its editing — you can set
+an overnight stay, parking, or an extra point there (those are
+on-the-road actions). If you absolutely must edit the route from a
+phone, switch your browser to "desktop site" and suffer on the small
+screen deliberately.
+
 ---
 
 ### Mobile details worth knowing
