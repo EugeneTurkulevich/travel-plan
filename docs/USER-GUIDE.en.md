@@ -80,6 +80,10 @@ in the map's top bar.
 
 Every row in the list shows the map's name, member count (👥), and a
 **"draft"** badge if it's a private workspace rather than a live map.
+If a map has **route alternatives** (section 7), sub-rows "↳ name ·
+updated …" appear under its row — clicking a sub-row opens the map
+straight into that assembly's view, while clicking the map row itself
+opens the normal, main view.
 
 ---
 
@@ -390,6 +394,44 @@ route shortcut you don't want to draw as an actual change to the path.
 Clicking the dashed line, or the "unlink" button on the point card,
 removes it.
 
+### Route alternatives 🗺️
+
+An alternative is another **assembly of the same route** on the same
+map: a different set or order of points, its own dates and timings —
+while the points themselves (descriptions, photos, POIs, comments,
+ratings) stay shared across all assemblies. It's the tool for
+discussing a big change ("what if we skip Dubrovnik but get two nights
+in Split?") without touching the current plan and without retelling
+the variant in words.
+
+- Alternatives are created and edited by **AI agents** (via the map's
+  MCP tools); the interface doesn't edit an assembly. Permissions are
+  the same as for editing the route.
+- ☰ → **"🧭 Route alternatives…"** switches **your personal view**
+  between the main route and the alternatives (the list shows name,
+  author, and how recently each was updated). The choice is yours
+  alone: every member views the map the way they picked.
+- While you're viewing an alternative, an **orange banner "…this is
+  NOT the current plan"** hangs at the top with a return button: the
+  assembly's dates and times differ from the real plan, and mixing
+  them up mid-trip is dangerous. Route editing is disabled in this
+  mode — viewing is viewing.
+- The compass points 🧭 in this mode show everything **not** in the
+  assembly — including main-route points the alternative skips.
+- A point used by at least one alternative can't be deleted from the
+  map until it's removed from those assemblies (or the alternative
+  itself is deleted).
+- While viewing an alternative the address bar carries `alt=…` — a
+  copied link opens exactly this assembly for the recipient (one-off,
+  without changing their own saved choice).
+- On mobile there's no menu item — pick the assembly from the
+  **"My maps"** page (🏠): alternatives appear as "↳ …" sub-rows under
+  the map (see section 2); the indicator banner works on mobile too.
+- An alternative can become the main route ("adopting" it — an agent's
+  job): the assembly becomes the plan, and the previous plan is kept
+  alongside as an alternative named "Main until …" — the route history
+  stays continuous (section 9).
+
 ### What's new
 
 Points with unread changes are marked with a dot **●** on the marker
@@ -457,7 +499,10 @@ comparing two trip ideas, or seeing how this year's route crosses last
 year's. The same menu item opens, swaps, and turns off the ghost (once
 one is active, the first item in the list becomes "❌ Remove ghost").
 The ghost doesn't survive a page reload — it's a temporary, session-only
-overlay.
+overlay. The same picker also offers the **current map's route
+alternatives** (section 7) — overlaying another assembly on top of what
+you're viewing; and while viewing an alternative, the reverse: a ghost
+of the main route.
 
 ### Exporting and importing a map as JSON
 
