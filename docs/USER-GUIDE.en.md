@@ -91,9 +91,9 @@ opens the normal, main view.
 
 - **The map** — center of the screen: route points, the line between
   them, marks and alternatives. The route line is colored by day
-  based on that day's travel distance — a "temperature" scale running
-  from blue (shortest day) through green and yellow to orange
-  (longest); days with no travel stay uncolored.
+  based on that day's travel distance — a gradient from blue (shortest
+  day) through violet to red (longest); days with no travel stay
+  uncolored.
 - **Day sidebar** (desktop: on the right) — the route split by date:
   each day's points; the day header shows the day's distance, with the
   badge tinted the same color as that day's stretch on the map — easy
