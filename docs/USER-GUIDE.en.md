@@ -93,7 +93,10 @@ opens the normal, main view.
   them, marks and alternatives. The route line is colored by day
   based on that day's travel distance — a gradient from blue (shortest
   day) through violet to red (longest); days with no travel stay
-  uncolored.
+  uncolored. When the route travels the same road twice (out and back
+  along the same way, or a repeat overnight at the same base), the
+  repeat pass is drawn as a parallel line alongside — each pass stays
+  visible in its own day color instead of the last one painting over.
 - **Day sidebar** (desktop: on the right) — the route split by date:
   each day's points; the day header shows the day's distance, with the
   badge tinted the same color as that day's stretch on the map — easy
