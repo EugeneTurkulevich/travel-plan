@@ -95,14 +95,16 @@ opens the normal, main view.
   from blue (shortest day) through green and yellow to orange
   (longest); days with no travel stay uncolored.
 - **Day sidebar** (desktop: on the right) — the route split by date:
-  each day's points; the day header shows distance and travel time
-  ("127 km · 2h 15m"), with the badge tinted the same color as that
-  day's stretch on the map — easy to match a day in the list to a
-  stretch on the map. If part of a day's legs has no known time (the
-  routing service didn't answer), a "≥" — "at least" — precedes the
-  time. On a day you leave a multi-night stay for a trip and come back
-  to the same base, the trip back is now counted both in that day's
-  own total and in the "Total" line at the bottom of the list. Today's
+  each day's points; the day header shows the day's distance, with the
+  badge tinted the same color as that day's stretch on the map — easy
+  to match a day in the list to a stretch on the map. A point's
+  weather forecast sits on its own line right under the point's name.
+  The trip's total travel time lives in the "Total" line at the bottom
+  of the list: it is pure driving time (the routing service's
+  estimate), not counting stops and sightseeing; if part of the legs
+  has no known time (the service didn't answer), a "≥" — "at least" —
+  precedes it. On a day you leave a multi-night stay for a trip and
+  come back to the same base, the trip back is counted too. Today's
   card also carries the "Maps"/"Waze" links.
 - **Place card** (left panel, the "info panel") — opens when you click
   a point on the map or in the sidebar: name, description, photo,
