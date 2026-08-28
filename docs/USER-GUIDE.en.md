@@ -58,15 +58,6 @@ in the map's top bar.
 
 - **➕ Create map** — type a name in the field above the button and
   click it. The new map opens right away, empty, with you as owner.
-- **📝 Create draft** — same, but the map is marked as a **draft**: a
-  private workspace that members of your "live" maps can't see. Handy
-  for sketching a route before showing it to the group. Promoting a
-  finished draft to a live map isn't something the interface does —
-  that's a job for an AI agent.
-- **📝 Draft from this map** — appears once some map with a route is
-  already open: creates a new draft and immediately copies the current
-  route into it (useful for experimenting without risking the
-  original).
 - **Join by ID** — type someone else's map ID into the **"other map's
   ID"** field and click **"Join"**. The owner copies their map's ID via
   ☰ → "Copy map ID" and sends it to you separately (messenger, email —
@@ -77,6 +68,15 @@ in the map's top bar.
 - The number of maps you can hold at once is capped by the server
   (five by default, drafts count toward the same limit) — the
   administrator can raise or lower it per person.
+
+The manual "create draft" buttons are gone from this screen — with
+that block removed, the visible map list is bigger. Drafts themselves
+haven't gone anywhere: a **draft** is a private workspace that members
+of your "live" maps can't see (tagged with a badge in the list below);
+starting a new one, or copying the current route into one, is now an
+AI agent's job only (via MCP). Promoting a finished draft to a live
+map by hand from the interface is likewise still not possible — an
+agent does that too, same as before.
 
 Every row in the list shows the map's name, member count (👥), and a
 **"draft"** badge if it's a private workspace rather than a live map.
@@ -90,10 +90,20 @@ opens the normal, main view.
 ## 3. The screen, at a glance
 
 - **The map** — center of the screen: route points, the line between
-  them, marks and alternatives.
+  them, marks and alternatives. The route line is colored by day
+  based on that day's travel distance — a "temperature" scale running
+  from blue (shortest day) through green and yellow to orange
+  (longest); days with no travel stay uncolored.
 - **Day sidebar** (desktop: on the right) — the route split by date:
-  each day's points, total distance; today's card also carries the
-  "Maps"/"Waze" links.
+  each day's points; the day header shows distance and travel time
+  ("127 km · 2h 15m"), with the badge tinted the same color as that
+  day's stretch on the map — easy to match a day in the list to a
+  stretch on the map. If part of a day's legs has no known time (the
+  routing service didn't answer), a "≥" — "at least" — precedes the
+  time. On a day you leave a multi-night stay for a trip and come back
+  to the same base, the trip back is now counted both in that day's
+  own total and in the "Total" line at the bottom of the list. Today's
+  card also carries the "Maps"/"Waze" links.
 - **Place card** (left panel, the "info panel") — opens when you click
   a point on the map or in the sidebar: name, description, photo,
   rating, discussion, timing and content editors. The photo is a
@@ -429,15 +439,26 @@ the variant in words.
 - The same menu item switches **your personal view** between the main
   route and the alternatives (the list shows name, author, and how
   recently each was updated). The choice is yours alone: every member
-  views the map the way they picked.
+  views the map the way they picked; switching between assemblies
+  doesn't reset the map's zoom or position either.
 - **✏️ in the banner** opens the assembly editor in place of the route
   list: "in assembly" checkboxes across all the map's points, order,
   date, nights, overnight/visit, arrival time — and every change is
   **immediately visible on the map** without closing the editor (the
-  route line redraws itself moments after each change). "Save" is one
-  step; "Cancel" (or Esc) discards the draft without a trace. Point
-  content (descriptions, photos, POIs) is out of the editor's reach —
-  those are shared point properties, edited in the normal mode.
+  route line redraws itself moments after each change, and the map's
+  zoom and position stay put — the view only resets when you open or
+  switch the map itself). "Save" is one step; "Cancel" (or Esc)
+  discards the draft without a trace. Point content (descriptions,
+  photos, POIs) is out of the editor's reach — those are shared point
+  properties, edited in the normal mode.
+- Checking a point's box **doesn't move its row** in the list — the
+  point stays put and simply joins the assembly, no scroll jumps. A
+  row only jumps up into "its day" once the point gets a date; the
+  **↑↓** buttons for fine-tuning order within a day only show up for
+  points that have one. Changing a point's arrival time automatically
+  recomputes the arrival time for later points on the same day — the
+  same formula (travel-time estimate plus buffer) used on the main
+  route.
 - **🗑 in the banner** deletes the assembly you're viewing (after a
   confirmation) and returns you to the main route. Only the assembly
   itself disappears — order, dates, timings; the route points and
