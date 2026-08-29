@@ -352,7 +352,9 @@ point yet, it shows the point itself and its surroundings right away.
 - **🏨 Booking** — shows up in the detail map's header and at the
   bottom of the place card for any overnight with a name and a date
   (as long as its checkout date hasn't passed) — opens a Booking.com
-  search prefilled with the dates and coordinates.
+  search prefilled with the dates and coordinates. If a booking for
+  this place has already been imported (section 8), the button shrinks
+  to just the 🏨 icon (same link) with a "booked" label next to it.
 
 ---
 
@@ -510,7 +512,9 @@ it (same as a manual overnight pin, section 6).
 The **"🏨 Booking"** button (on a point's card and in the detail map's
 header) shows up for any overnight with a name and a date — whether or
 not it came from an import — and disappears only once its checkout
-date has already passed.
+date has already passed. Once a booking has been imported, the full
+button is no longer needed — it shrinks to just the 🏨 icon (the same
+search link) with a "booked" label next to it.
 
 **Google Maps / Waze** in the sidebar — only on **today's** card, and
 only when today has planned driving (past and future days get no
