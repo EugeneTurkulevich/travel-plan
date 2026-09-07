@@ -200,6 +200,33 @@ screen deliberately.
   the server and the map is shown from the offline cache (changes will
   catch up as soon as the connection returns).
 
+### Without an internet connection
+
+The map is meant to be used on the road, so losing signal does not leave
+you with a blank screen. **One condition: open the map online at least
+once** — that is when the browser stocks its cache.
+
+What works offline:
+
+- the app itself and the whole interface;
+- the route, schedule, points, places, marks, ratings and route
+  variants — everything that finished loading the last time you were
+  online;
+- **the map imagery for the areas and zoom levels you have already
+  looked at online**. Map tiles live in their own cache and survive app
+  updates. Driving offline into an area you never opened will not
+  work — it will stay grey;
+- editing: your changes are written locally and travel to the server on
+  their own as soon as the connection is back.
+
+What does not work without a connection: place search, weather updates,
+recalculating the drive between points (new legs are drawn as a straight
+line until you are back online) and booking imports.
+
+**Tip before you set off:** open the map on Wi-Fi and **pan along the
+whole route, zooming into the places you will actually need** — that way
+the tiles settle into the cache in advance.
+
 ## 4. Building the route by hand
 
 ### Adding a point
