@@ -599,6 +599,40 @@ alternatives** (section 7) — overlaying another assembly on top of what
 you're viewing; and while viewing an alternative, the reverse: a ghost
 of the main route.
 
+### Car expenses 🚗
+
+Not everyone sees this menu item: it appears only if an administrator
+has personally enabled the layer for your account — for everyone else
+it's simply not in the menu. The layer shows toll, parking, and fuel
+payments you log in a separate app of yours (MyMyCar) on the map —
+without importing that data here, by reading it live instead.
+
+☰ → **"Car expenses — sign in"** opens a popup sign-in with the same
+Google account, separate from your map sign-in — once per device,
+after that the session is remembered on its own. If the browser blocks
+the popup, allow popups for the site and try again: without that the
+layer won't turn on. After signing in, the item switches to **"Show
+car expenses" / "Hide car expenses"**, and next to it you'll always see
+the **source account** (👤 with its email) and a **✕** sign-out button
+— check it against the account you actually log entries with in
+MyMyCar: sign in with the wrong account and the layer stays silently
+empty, with no visible difference.
+
+The layer only reads **days that have dates set on the map** — with no
+dates it doesn't work at all. There's no history: only events logged
+after this feature shipped are shown, and only ones that have a
+place's coordinates in MyMyCar, so on trips already taken the layer
+will most likely be empty ("No events with coordinates for these
+dates") — that's a normal state, not a bug.
+
+At an overview zoom, expenses are small dots of one color — just
+"there's something here", not clickable. Zoom in and the dots get
+colored by type (⛽️ fuel, 🅿️ parking, 🛣️ toll); zoom in further (and
+always on a point's detail map) they become icons, and tapping one
+shows the payment's time badge. The layer is personal: only you see
+it — other members of a shared map won't see anything, even while your
+layer is turned on.
+
 ### Exporting and importing a map as JSON
 
 ☰ → **"💾 Export map (JSON)…"** saves the entire route, trip rules,
