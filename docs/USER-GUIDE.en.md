@@ -97,6 +97,10 @@ opens the normal, main view.
   along the same way, or a repeat overnight at the same base), the
   repeat pass is drawn as a parallel line alongside — each pass stays
   visible in its own day color instead of the last one painting over.
+  Finding those stretches is heavy work: right after the map first
+  opens (or the route changes) the lines run as one for a few seconds
+  and then "split apart"; the result is remembered, so later opens of
+  the same route draw them at once.
 - **Day sidebar** (desktop: on the right) — the route split by date:
   each day's points; the day header shows the day's distance, with the
   badge tinted the same color as that day's stretch on the map — easy
