@@ -176,8 +176,9 @@ The mobile version is **view-only for the main map**, regardless of
 your permissions: route editing, point dragging, links 🔗, creating
 alternative points 🧭, and the agent chat are desktop-only. What stays
 on the phone: **marks** (creating and discussing), **ratings** and
-place comments, the "What's new" indicators, and switching route
-alternatives. A point's **detail map** keeps its editing — you can set
+place comments, the "What's new" indicators, switching route
+alternatives, and **booking imports** (☰ → "📅 Import bookings",
+section 8). A point's **detail map** keeps its editing — you can set
 an overnight stay, parking, or an extra point there (those are
 on-the-road actions). If you absolutely must edit the route from a
 phone, switch your browser to "desktop site" and suffer on the small
