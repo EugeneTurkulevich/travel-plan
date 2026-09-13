@@ -60,7 +60,7 @@ in the map's top bar.
   click it. The new map opens right away, empty, with you as owner.
 - **Join by ID** — type someone else's map ID into the **"other map's
   ID"** field and click **"Join"**. The owner copies their map's ID via
-  ☰ → "Copy map ID" and sends it to you separately (messenger, email —
+  ☰ → "Data" → "Copy map ID" and sends it to you separately (messenger, email —
   there's no in-app invitation mechanism).
 - **🗑 (next to a map's name in the list)** — delete the map. Only the
   owner sees this button. The confirmation warns: **"This is
@@ -132,12 +132,12 @@ opens the normal, main view.
   — centers the map on your actual position (needs the browser's
   location permission).
 - **Satellite** — on the main map, the base layer can only be switched
-  between Esri and OpenStreetMap (☰ → "Map" → dropdown); a satellite
+  between Esri and OpenStreetMap (☰ → "Layers" → "Map tiles"); a satellite
   layer (🛰) is only available on a point's **detail map** (section 6).
 - **Weather** — a per-day forecast (Open-Meteo) shows up in the sidebar
   next to the date; up to 16 days out it's an actual forecast, further
   out it falls back to a 5-year average for that calendar day. Updates
-  automatically, or manually via ☰ → "Refresh weather." Alongside the
+  automatically, or manually via ☰ → "Data" → "Refresh weather." Alongside the
   weather, each day card shows the sun: ☀️ sunrise time before the
   day's first item and 🌅 sunset time after the last one (and on a
   point's detail map — the range across all nights).
@@ -145,24 +145,31 @@ opens the normal, main view.
 ### The ☰ menu
 
 Groups of items (some are visible only to people who can edit the
-route):
+route). The "Layers", "Data", and "Agents & server" groups collapse
+when you tap their heading, and the menu remembers on this device
+which ones you opened or collapsed. By default "This map" and "Layers"
+are open and the rest are collapsed.
 
-- **This map** — the **"✏️ Edit mode"** toggle (turn it off to browse
-  the map without risking an accidental change — every editing button
-  hides; flip it back on the same way), rename the map, **"🔗 Copy map
-  ID"** (for inviting people), **"👥 Members…"**, **"📋 Trip
-  rules…"**, **"🔀 Rebuild segment…"**, **"💾 Export map (JSON)…"**,
-  **"📥 Import map (JSON)…"**.
-- **Agents** — **"🤖 Connect an AI agent…"**, **"🕘 Route history…"**.
-  On a phone the agent-connection item is hidden (connecting is done
-  from a computer), so the group shows up only for people who have
-  **"Route history…"** — that is, editing rights.
-- **Data** — **"📅 Import bookings"**, **"🌦 Refresh weather"**, **"🔄
-  Rebuild legs"** (recompute distances and time from scratch),
-  visibility toggles for resolved marks, alternatives, links between
-  points, **"👻 Map ghost…"**.
-- **Map** — pick the street base layer (Esri / OpenStreetMap).
-- **Account** — sign out.
+- **This map** (always open) — the **"✏️ Edit mode"** toggle (turn it
+  off to browse the map without risking an accidental change — every
+  editing button hides; flip it back on the same way), rename the map,
+  **"👥 Members…"**, **"📋 Trip rules…"**, **"🧭 Route
+  alternatives…"**.
+- **Layers** — everything that only changes what's drawn on the map:
+  the **"Resolved marks"**, **"Alternatives"**, and **"Point links"**
+  toggles (checked = shown; the menu stays open, so you can flip
+  several in a row), **"👻 Ghost map…"**, the **"🚗 Car expenses"**
+  layer (if it's enabled for you), and **"🗺 Map tiles"** — the street
+  base layer (Esri / OpenStreetMap).
+- **Data** — one-off actions: **"📅 Import bookings"**, **"🌦 Refresh
+  weather"**, **"🔄 Rebuild legs"** (recompute distances and time from
+  scratch), **"🔀 Rebuild section…"**, **"💾 Export map (JSON)…"**,
+  **"📥 Import map (JSON)…"**, **"🔗 Copy map ID"** (for inviting
+  people), **"🕘 Route history…"**.
+- **Agents & server** — **"🤖 Connect AI agent…"** (administrators
+  also get **"⚙️ Administration…"** here). This group isn't shown on a
+  phone: agents are connected from a computer.
+- At the bottom of the menu — **"🚪 Log out"** and the version number.
 
 ### On mobile
 
@@ -417,7 +424,7 @@ member, regardless of route-editing rights. A mark is a pin with text
 and a comment thread under it: anyone can reply, and the mark's author
 can close it with the **"✅"** button (an optional "what got done"
 comment). Closed marks show **"✅ done"** or **"⏭ skipped"**; hide them
-from the map via ☰ → "Hide resolved marks." A comment left by an AI
+from the map via ☰ → "Layers" → uncheck "Resolved marks." A comment left by an AI
 agent is signed **"🤖 model"** — so you can tell at a glance who wrote
 it.
 
@@ -447,7 +454,7 @@ points.
   which one from a list).
 - **➖ Remove from route** (section 4) — the reverse: a route point
   becomes an alternative.
-- **🔀 Rebuild segment…** (☰, for those who can edit the route) — lets
+- **🔀 Rebuild section…** (☰ → "Data", for those who can edit the route) — lets
   you pick several route points to remove and/or several alternatives
   to add, all applied in one step.
 
@@ -593,7 +600,7 @@ stats (point count, total distance). For each one:
 
 ### Map ghost 👻
 
-☰ → **"👻 Map ghost…"** overlays a translucent, view-only route from
+☰ → **"👻 Ghost map…"** overlays a translucent, view-only route from
 **another one of your maps** on top of the current one — handy for
 comparing two trip ideas, or seeing how this year's route crosses last
 year's. The same menu item opens, swaps, and turns off the ghost (once
@@ -615,12 +622,12 @@ expenses, etc.) as one shared marker — without importing that data
 here, by reading it live instead. The map never sees or shows amounts
 or mileage — only where and when it happened.
 
-☰ → **"Car expenses — sign in"** opens a popup sign-in with the same
+☰ → "Layers" → **"Car expenses — sign in"** opens a popup sign-in with the same
 Google account, separate from your map sign-in — once per device,
 after that the session is remembered on its own. If the browser blocks
 the popup, allow popups for the site and try again: without that the
-layer won't turn on. After signing in, the item switches to **"Show
-car expenses" / "Hide car expenses"**, and next to it you'll always see
+layer won't turn on. After signing in, the item becomes a checkbox
+toggle **"🚗 Car expenses"**, and below it you'll always see
 the **source account** (👤 with its email) and a **✕** sign-out button
 — check it against the account you actually log entries with in
 MyMyCar: sign in with the wrong account and the layer stays silently
@@ -643,8 +650,8 @@ it — other members of a shared map won't see anything, even while your
 layer is turned on.
 
 **Snap the road to car points.** When the layer is on and has points,
-the same menu group shows a **"🛣 Snap the road to car points…"**
-action. It takes the car points for a chosen day (today by default)
+a **"🛣 Snap road to car points…"** action appears under the layer
+toggle. It takes the car points for a chosen day (today by default)
 and places "drive through here" hints — the same ones you get by
 right-clicking the line — on that day's road, so the route passes
 exactly through the places you actually were. A preview comes first:
@@ -700,7 +707,7 @@ worth double-checking.
 
 ### Connecting an AI agent
 
-☰ → **"🤖 Connect an AI agent…"** gives you a connector address and
+☰ → **"🤖 Connect AI agent…"** gives you a connector address and
 step-by-step instructions for each popular app (Claude, Claude Code,
 ChatGPT, Gemini, Grok, Antigravity). A connected agent acts on your
 behalf — the same permissions and ban status as you personally. This
