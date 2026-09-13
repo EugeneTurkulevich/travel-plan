@@ -609,8 +609,10 @@ of the main route.
 Not everyone sees this menu item: it appears only if an administrator
 has personally enabled the layer for your account — for everyone else
 it's simply not in the menu. The layer shows toll, parking, and fuel
-payments you log in a separate app of yours (MyMyCar) on the map —
-without importing that data here, by reading it live instead.
+payments, plus odometer readings, you log in a separate app of yours
+(MyMyCar) on the map — without importing that data here, by reading it
+live instead. The map never sees or shows amounts or mileage — only
+where and when it happened.
 
 ☰ → **"Car expenses — sign in"** opens a popup sign-in with the same
 Google account, separate from your map sign-in — once per device,
@@ -632,7 +634,7 @@ dates") — that's a normal state, not a bug.
 
 At an overview zoom, expenses are small dots of one color — just
 "there's something here", not clickable. Zoom in and the dots get
-colored by type (⛽️ fuel, 🅿️ parking, 🛣️ toll); zoom in further (and
+colored by type (⛽️ fuel, 🅿️ parking, 🛣️ toll, 🔢 odometer); zoom in further (and
 always on a point's detail map) they become icons, and tapping one
 shows the payment's time badge. The layer is personal: only you see
 it — other members of a shared map won't see anything, even while your
