@@ -642,6 +642,20 @@ shows the payment's time badge. The layer is personal: only you see
 it — other members of a shared map won't see anything, even while your
 layer is turned on.
 
+**Snap the road to car points.** When the layer is on and has points,
+the same menu group shows a **"🛣 Snap the road to car points…"**
+action. It takes the car points for a chosen day (today by default)
+and places "drive through here" hints — the same ones you get by
+right-clicking the line — on that day's road, so the route passes
+exactly through the places you actually were. A preview comes first:
+which legs get how many points and how far they are from the current
+line; points more than 2 km away are flagged ⚠️ — check they're not a
+side trip you don't want in the route. Points within 100 m of the road
+are skipped (the road already goes there). Route editing must be on.
+Note: hints are part of the shared route — every member of the map
+sees them, and the day schedule gets recalculated. Between hints the
+road is still chosen by the router, as before.
+
 ### Exporting and importing a map as JSON
 
 ☰ → **"💾 Export map (JSON)…"** saves the entire route, trip rules,
