@@ -691,8 +691,9 @@ after the reload (they live in the page address). If you happen to be
 typing in a field, the update waits until you leave it, so nothing
 half-written is lost. If a new version shipped while the map was
 closed, it is picked up on the next open: the page reloads itself once
-right after starting. The current version is always shown at the
-bottom of the ☰ menu.
+right after starting. If a broken update ever stops the map from
+starting, it fetches a clean copy by itself once a fixed version is
+out. The current version is always shown at the bottom of the ☰ menu.
 
 ### 📌 Date pins from the agent
 
