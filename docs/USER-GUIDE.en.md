@@ -566,8 +566,16 @@ them). Google Maps caps intermediate stops at 9 — a yellow note under
 the buttons warns you when there are more.
 
 On mobile, on a day with planned driving the map greets you with a
-"Driving today" popup: today's schedule plus two big **Google Maps** /
-**Waze** buttons (shown once per day per browser tab).
+"Driving today" popup (automatically once per day per browser tab). It
+shows today's schedule, and every point of the day has two buttons,
+**"🗺 Google"** / **"🚗 Waze"**, that navigate straight to that point
+from wherever you are. If the day ends at a parking pin, there's an extra
+🅿 row with the same buttons at the bottom. The big **Google Maps**
+button at the bottom routes through every stop of the day (there's no
+big Waze button here: Waze can't route through several points). Closed
+the popup and want it back? On such a day the map has a round **🚗**
+button above the "ℹ️" / "📋" buttons. It reopens the popup at any time,
+no need to restart the app.
 
 ---
 
