@@ -548,6 +548,30 @@ and offers a checklist of candidates — pick the ones you want and click
 for the right date and immediately moves that day's route point onto
 it (same as a manual overnight pin, section 6).
 
+To keep the list easy to read:
+
+- **Already on the map.** If the booking's date already has an
+  overnight, its row stays unchecked at the bottom of the list, and the
+  status reads "Found N, M of them already on the map." The row shows
+  what is on that date right now: "same place, already on the map,"
+  "position adjusted manually," or a warning that the existing overnight
+  will be overwritten.
+- **Past nights** that are already on the map are folded into one short
+  row at the top with no checkboxes — just to show the import sees them.
+- **Calendar freshness.** Under the status you see the date of the
+  newest event the calendar returned. Google refreshes this feed with a
+  delay of up to several hours, so a booking you just made may show up
+  in the list later, even though it is already in the calendar itself.
+
+**Fixing a hotel's position without losing the booking.** If the
+geocoder put the hotel in the wrong spot, right-click (long-press on a
+phone) at the correct place on the day's detail map → "🛏 Overnight spot,"
+and **keep the name unchanged** in the dialog. The booking is kept (the
+button stays the compact "🏨 booked," check-in and check-out times too),
+only the position changes, and a later re-import won't reset it. If you
+change the name, the overnight becomes a plain manual pin and the
+booking details are lost.
+
 The **"🏨 Booking"** button (on a point's card and in the detail map's
 header) shows up for any overnight with a name and a date — whether or
 not it came from an import — and disappears only once its checkout
