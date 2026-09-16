@@ -384,8 +384,8 @@ point yet, it shows the point itself and its surroundings right away.
   detail map to drop a hotel or parking pin for a specific date.
   Placing an overnight pin automatically moves the actual route point
   (the coordinate used to compute distances) onto it. The **"🔗 Anchor
-  “Name” here"** button in the pin's popup does the same thing manually
-  at any time — handy if the main point ever got dragged somewhere else
+  … here"** button in the pin's popup (the ellipsis is the point's name)
+  does the same thing manually at any time — handy if the main point ever got dragged somewhere else
   while editing. It moves the point whose detail map is currently open
   (its name is on the button), so a parking pin can be anchored to a
   daytime stop too, not only to the overnight point. On an
