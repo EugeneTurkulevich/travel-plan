@@ -119,7 +119,13 @@ opens the normal, main view.
   carousel of all the place's pictures (‹ › arrows, or swipe on
   mobile; the caption names the POI each photo belongs to); clicking
   or tapping a photo opens it fullscreen (flip with the arrows, the
-  ← → keys or a swipe; close with Esc, ✕ or a tap on the backdrop).
+  ← → keys or a swipe; close with Esc, ✕ or a tap on the backdrop). At
+  the right of the name row sits a **📍** icon: it opens that very place
+  in a maps app on your phone, and Android asks which one (OsmAnd,
+  Google Maps, whatever you have installed — you can pick "always").
+  It only shows the place, it does not navigate: for directions use the
+  "Maps"/"Waze" links on today's card. On an iPhone the icon does
+  nothing — iOS is deliberately not supported.
 - **Search 🔍** — the field in the map's top bar: looks up an address
   or place name (via OpenStreetMap) and flies the map there.
 - **☰ Menu** — the app's main menu (see below).
